@@ -1,0 +1,11 @@
+services:
+  sms_forwarder:
+    build: .
+    privileged: true
+    devices:
+      - "${DEVICE}:${DEVICE}"
+    env_file:
+      - .env
+    restart: unless-stopped
+    volumes:
+      - ./state:/var/spool/gammu
