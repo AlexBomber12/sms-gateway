@@ -26,8 +26,9 @@ export GAMMU_CONFIG_PATH=/tmp/smsdrc
 ## Environment variables
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `DEVICE` | Path to the modem device | `/dev/ttyUSB0` |
-| `BAUDRATE` | Serial baud rate | `115200` |
+| `MODEM_DEVICE` | Optional fixed modem device | `/dev/ttyUSB0` |
+| `DEVICE` | *(legacy)* Path to the modem device | `/dev/ttyUSB0` |
+| `BAUDRATE` | *(legacy)* Serial baud rate | `115200` |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token used for sending messages | `123:ABC` |
 | `TELEGRAM_CHAT_ID` | Telegram chat ID that will receive messages | `123456` |
 | `LOGLEVEL` | Optional gammu debug level (1..3) | `1` |
@@ -44,6 +45,25 @@ cd sms-gateway
 cp .env.example .env
 docker compose up -d
 ```
+
+## Fire-and-Forget Deployment
+After starting, the container automatically searches for a Huawei modem and keeps
+`gammu-smsd` running even if the USB port changes.
+
+```bash
+docker compose up -d
+docker compose logs -f smsgateway
+# look for “✅  Using modem …”
+```
+
+Run the container as root or add your user to `dialout` once:
+```bash
+sudo usermod -aG dialout $USER
+```
+
+You can optionally pin the modem with `MODEM_DEVICE=/dev/ttyUSB0`.
+Stable names under `/dev/serial/by-id/` work out of the box, but you can also
+create a custom udev rule if needed.
 
 The container runs as root because USB devices usually require privileged access.
 

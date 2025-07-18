@@ -1,19 +1,18 @@
 services:
-  sms_forwarder:
-    container_name: sms-gateway
+  smsgateway:
+    container_name: smsgateway
     image: ghcr.io/owner/sms-gateway:latest
     build: .
-    privileged: true
+    group_add: [dialout]
     devices:
-      - "${DEVICE}:${DEVICE}"
+      - /dev/serial/by-id/:/dev/serial/by-id/
     env_file:
       - .env
     restart: unless-stopped
     volumes:
       - ./state:/var/spool/gammu
-      - ./smsdrc:/etc/gammu-smsdrc:ro
     healthcheck:
-      test: ["CMD-SHELL", "gammu --identify -c /etc/gammu-smsdrc >/dev/null 2>&1"]
+      test: ["CMD-SHELL", "gammu --identify -c /tmp/gammu-smsdrc >/dev/null 2>&1"]
       interval: 30s
       timeout: 5s
       retries: 3
