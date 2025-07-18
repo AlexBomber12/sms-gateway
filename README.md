@@ -95,9 +95,15 @@ Release with:
 git tag vX.Y.Z && git push --tags
 ```
 
-Set `CI_MODE=true` in CI pipelines to disable the modem detection loop. The container
-will stay alive without probing for hardware and will execute any supplied command.
-Passing a command after the image name also bypasses the loop during normal runs.
+Set `CI_MODE=true` in CI pipelines to disable the modem detection loop. When no
+command is supplied the image exits immediately with status `0`. Passing a
+command after the image name bypasses the loop during normal runs.
+
+Example CI smoke test:
+
+```sh
+docker run --rm -e CI_MODE=true ghcr.io/owner/sms-gateway:sha /bin/true
+```
 
 ## Troubleshooting
 1. **Ports are visible on host?** `ls -l /dev/ttyUSB*`
