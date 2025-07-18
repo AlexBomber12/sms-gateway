@@ -2,19 +2,42 @@ name: build-and-push
 on:
   push:
     branches: [ main ]
+    tags: [ '*' ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: set-tag
-        id: tag
+      - name: Install python deps
+        run: pip install -r requirements.txt
+
+      - name: Lint
+        run: python -m py_compile on_receive.py
+
+      - name: Run unit tests and fail if none are found
         run: |
-          echo "IMAGE=ghcr.io/$(echo $GITHUB_REPOSITORY | tr '[:upper:]' '[:lower:]'):latest" >> $GITHUB_ENV
-          echo "::notice title=Image::$IMAGE"
+          output=$(python -m unittest discover -s tests -v || true)
+          echo "$output"
+          if echo "$output" | grep -q 'Ran 0 tests'; then
+            echo "ERROR: No tests were executed. Failing the build."
+            exit 1
+          fi
+
+      - name: Set image tags
+        id: vars
+        run: |
+          REPO=ghcr.io/$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')
+          TAGS="$REPO:${GITHUB_SHA}"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            TAGS="$TAGS,$REPO:${GITHUB_REF_NAME}"
+          fi
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            TAGS="$TAGS,$REPO:latest"
+          fi
+          echo "IMAGE=$REPO" >> $GITHUB_ENV
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
 
       - uses: docker/setup-buildx-action@v3
 
@@ -28,4 +51,12 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.IMAGE }}
+          tags: ${{ steps.vars.outputs.tags }}
+
+      - name: Smoke test
+        run: |
+          IMAGE=$(echo "${{ steps.vars.outputs.tags }}" | cut -d',' -f1)
+          docker run --rm --entrypoint python3 \
+            -e DEVICE=/dev/null -e BAUDRATE=9600 \
+            -e TELEGRAM_BOT_TOKEN=dummy -e TELEGRAM_CHAT_ID=dummy \
+            "$IMAGE" -m py_compile /app/on_receive.py
