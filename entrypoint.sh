@@ -1,11 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# --- 0. If any CLI args were supplied, bypass modem logic -------------
+if [[ $# -gt 0 ]]; then
+    exec "$@"
+fi
+
+# --- 0b. CI short-circuit --------------------------------------------
+if [[ "${CI_MODE:-}" == "true" ]]; then
+    echo "[entrypoint] CI_MODE=true – skipping modem loop"
+    exit 0
+fi
+
 log(){ echo "[entrypoint] $*"; }
 
 MODEM_DEVICE="${MODEM_DEVICE:-}"
 LOGLEVEL="${LOGLEVEL:-1}"
-CI_MODE="${CI_MODE:-false}"
 GAMMU_SPOOL_PATH="${GAMMU_SPOOL_PATH:-/var/spool/gammu}"
 GAMMU_CONFIG_PATH="${GAMMU_CONFIG_PATH:-/tmp/gammu-smsdrc}"
 
@@ -60,18 +70,6 @@ debuglevel = ${LOGLEVEL}
 logfile = /dev/stdout
 EOF_CONF
 }
-
-if [ "$CI_MODE" = "true" ]; then
-    if dev=$(find_modem); then
-        generate_config "$dev"
-        log "✅  Using modem $dev"
-        gammu-smsd -c "$GAMMU_CONFIG_PATH"
-        exit $?
-    else
-        log "CI_MODE enabled – skipping modem loop"
-        exit 0
-    fi
-fi
 
 while true; do
     if dev=$(find_modem); then
