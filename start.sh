@@ -7,13 +7,17 @@ log() { echo "[start.sh] $*"; }
 : "${BAUDRATE:?BAUDRATE variable is required}"
 LOGLEVEL="${LOGLEVEL:-1}"
 
+GAMMU_SPOOL_PATH="${GAMMU_SPOOL_PATH:-/var/spool/gammu}"
+GAMMU_CONFIG_PATH="${GAMMU_CONFIG_PATH:-/etc/gammu-smsdrc}"
+
 log "Starting with device $DEVICE baudrate $BAUDRATE"
 
-mkdir -p /var/spool/gammu/{inbox,outbox,sent,error,archive}
+mkdir -p "$GAMMU_SPOOL_PATH"/{inbox,outbox,sent,error,archive}
 
-if [ ! -f /etc/gammu-smsdrc ]; then
+if [ ! -f "$GAMMU_CONFIG_PATH" ]; then
     log "Generating default smsdrc"
-    cat > /etc/gammu-smsdrc <<EOF_CONF
+    mkdir -p "$(dirname "$GAMMU_CONFIG_PATH")"
+    cat > "$GAMMU_CONFIG_PATH" <<EOF_CONF
 [gammu]
 device     = ${DEVICE}
 connection = at
@@ -22,10 +26,10 @@ logformat  = textalldate
 
 [smsd]
 service      = files
-inboxpath    = /var/spool/gammu/inbox/
-outboxpath   = /var/spool/gammu/outbox/
-sentpath     = /var/spool/gammu/sent/
-errorpath    = /var/spool/gammu/error/
+inboxpath    = ${GAMMU_SPOOL_PATH}/inbox/
+outboxpath   = ${GAMMU_SPOOL_PATH}/outbox/
+sentpath     = ${GAMMU_SPOOL_PATH}/sent/
+errorpath    = ${GAMMU_SPOOL_PATH}/error/
 RunOnReceive = python3 /app/on_receive.py
 debuglevel   = ${LOGLEVEL}
 logfile      = /dev/stdout
@@ -34,4 +38,9 @@ else
     log "Using existing smsdrc from volume"
 fi
 
-exec gammu-smsd -c /etc/gammu-smsdrc
+if [ "${1:-}" = "--dry-run" ]; then
+    log "Dry run requested - not starting gammu-smsd"
+    exit 0
+fi
+
+exec gammu-smsd -c "$GAMMU_CONFIG_PATH"

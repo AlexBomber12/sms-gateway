@@ -1,11 +1,14 @@
-name: build-and-push
+name: ci
+
 on:
   push:
-    branches: [ main ]
-    tags: [ '*' ]
+    branches: [main]
+    tags: ['*']
+  pull_request:
+    branches: [main]
 
 jobs:
-  build:
+  ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,46 +21,52 @@ jobs:
 
       - name: Run unit tests and fail if none are found
         run: |
-          output=$(python -m unittest discover -s tests -v || true)
+          set -e
+          output=$(python -m unittest discover -s tests -v)
           echo "$output"
           if echo "$output" | grep -q 'Ran 0 tests'; then
-            echo "ERROR: No tests were executed. Failing the build."
+            echo "ERROR: No tests were executed."
             exit 1
           fi
 
       - name: Set image tags
+        if: github.event_name != 'pull_request'
         id: vars
         run: |
-          REPO=ghcr.io/$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')
+          REPO=ghcr.io/$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
           TAGS="$REPO:${GITHUB_SHA}"
-          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             TAGS="$TAGS,$REPO:${GITHUB_REF_NAME}"
           fi
-          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
             TAGS="$TAGS,$REPO:latest"
           fi
-          echo "IMAGE=$REPO" >> $GITHUB_ENV
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
+          echo "IMAGE=$REPO" >> $GITHUB_ENV
 
       - uses: docker/setup-buildx-action@v3
+        if: github.event_name != 'pull_request'
 
       - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: docker/build-push-action@v5
+        if: github.event_name != 'pull_request'
         with:
           context: .
           push: true
-
           tags: ${{ steps.vars.outputs.tags }}
 
-      - name: Smoke test
+      - name: Smoke test container
+        if: github.event_name != 'pull_request'
         run: |
           IMAGE=$(echo "${{ steps.vars.outputs.tags }}" | cut -d',' -f1)
-          docker run --rm --entrypoint python3 \
-            -e DEVICE=/dev/null -e BAUDRATE=9600 \
+          docker run --rm -e DEVICE=/dev/null -e BAUDRATE=9600 \
             -e TELEGRAM_BOT_TOKEN=dummy -e TELEGRAM_CHAT_ID=dummy \
-            "$IMAGE" -m py_compile /app/on_receive.py
+            -e GAMMU_SPOOL_PATH=/tmp/gammu -e GAMMU_CONFIG_PATH=/tmp/smsdrc \
+            "$IMAGE" --dry-run
+          docker run --rm --entrypoint gammu-smsd "$IMAGE" --version
