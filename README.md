@@ -60,6 +60,10 @@ GAMMU_CONFIG_PATH=/tmp/gammu-smsdrc \
 python -m unittest discover -s tests -v
 ```
 
+The CI pipeline runs these tests both on the host and again inside the built
+Docker image. The image is only pushed if all tests succeed, ensuring you can
+`docker pull` with confidence.
+
 ## Troubleshooting
 1. **Ports are visible on host?** `ls -l /dev/ttyUSB*`
 2. **Port free?** `sudo fuser -v /dev/ttyUSB0`
