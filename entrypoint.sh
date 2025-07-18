@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# --- 0. If any CLI args were supplied, bypass modem logic -------------
-if [[ $# -gt 0 ]]; then
-    exec "$@"
+# ---- 0. Immediate bypasses ---------------------------------------------
+# (1) CI tells us explicitly not to wait for hardware
+if [[ "${CI_MODE:-}" == "true" ]]; then
+  echo "[entrypoint] CI_MODE=true – skipping modem scan"
+  exec "$@" 2>/dev/null || exec sleep infinity
 fi
 
-# --- 0b. CI short-circuit --------------------------------------------
-if [[ "${CI_MODE:-}" == "true" ]]; then
-    echo "[entrypoint] CI_MODE=true – skipping modem loop"
-    exit 0
+# (2) A command was supplied -> run it and exit
+if [[ $# -gt 0 ]]; then
+  exec "$@"
 fi
+
+# ---- 1. Normal production path (modem auto-scan loop) -------------------
 
 log(){ echo "[entrypoint] $*"; }
 

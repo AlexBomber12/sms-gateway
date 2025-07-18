@@ -95,8 +95,9 @@ Release with:
 git tag vX.Y.Z && git push --tags
 ```
 
-Set `CI_MODE=true` in CI pipelines to disable the modem detection loop. Passing
-a command after the image name also bypasses the loop.
+Set `CI_MODE=true` in CI pipelines to disable the modem detection loop. The container
+will stay alive without probing for hardware and will execute any supplied command.
+Passing a command after the image name also bypasses the loop during normal runs.
 
 ## Troubleshooting
 1. **Ports are visible on host?** `ls -l /dev/ttyUSB*`

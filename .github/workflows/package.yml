@@ -23,8 +23,23 @@ jobs:
       - uses: docker/build-push-action@v5
         with:
           context: .
-          push: true
+          tags: ghcr.io/${{ steps.meta.outputs.repo }}:${{ github.sha }}
+          push: false
+          load: true
+
+      - name: Unit tests inside container
+        run: |
+          docker run --rm \
+            -e CI_MODE=true \
+            ghcr.io/${{ steps.meta.outputs.repo }}:${{ github.sha }} \
+            python -m pytest -q
+
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
           tags: |
             ghcr.io/${{ steps.meta.outputs.repo }}:${{ github.ref_name }}
             ghcr.io/${{ steps.meta.outputs.repo }}:latest
+          push: true
+          load: false
 
