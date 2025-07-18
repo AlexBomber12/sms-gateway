@@ -2,10 +2,6 @@
 
 This project provides a simple gateway that forwards incoming SMS messages from a USB modem to a Telegram chat using `gammu`.
 
-## Requirements
-
-* Python 3.7+
-
 ## Quickstart
 1. Pull the image from GitHub Container Registry
    ```sh

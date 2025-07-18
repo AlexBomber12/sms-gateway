@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Resolve directory of this script for relative paths
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-
 log() { echo "[start.sh] $*"; }
 
 : "${DEVICE:?DEVICE variable is required}"
@@ -33,7 +30,7 @@ inboxpath    = ${GAMMU_SPOOL_PATH}/inbox/
 outboxpath   = ${GAMMU_SPOOL_PATH}/outbox/
 sentpath     = ${GAMMU_SPOOL_PATH}/sent/
 errorpath    = ${GAMMU_SPOOL_PATH}/error/
-RunOnReceive = python3 "${SCRIPT_DIR}/on_receive.py"
+RunOnReceive = python3 /app/on_receive.py
 debuglevel   = ${LOGLEVEL}
 logfile      = /dev/stdout
 EOF_CONF
