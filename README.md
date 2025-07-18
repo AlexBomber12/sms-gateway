@@ -84,16 +84,18 @@ The CI pipeline runs these tests both on the host and again inside the built
 Docker image. The image is only pushed if all tests succeed, ensuring you can
 `docker pull` with confidence.
 
-## Release pipeline
+## CI / Tag release
 The Docker image is published to GitHub Container Registry whenever a git tag is pushed.
 
-**Secrets required**: none (uses the built-in `GITHUB_TOKEN`).
+**Secrets required**: none beyond the default `GITHUB_TOKEN`.
 
 Release with:
 
 ```sh
-git tag <version> && git push --tags
+git tag vX.Y.Z && git push --tags
 ```
+
+For hardware-less pipelines set `CI_MODE=true` so the entrypoint exits if no modem is found.
 
 ## Troubleshooting
 1. **Ports are visible on host?** `ls -l /dev/ttyUSB*`

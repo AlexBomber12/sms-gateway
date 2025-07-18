@@ -72,6 +72,7 @@ jobs:
           docker run --rm -e DEVICE=/dev/null -e BAUDRATE=9600 \
             -e TELEGRAM_BOT_TOKEN=dummy -e TELEGRAM_CHAT_ID=dummy \
             -e GAMMU_SPOOL_PATH=/tmp/gammu -e GAMMU_CONFIG_PATH=/tmp/smsdrc \
+            -e CI_MODE=true \
             "$IMAGE" --dry-run
           docker run --rm --entrypoint gammu-smsd "$IMAGE" --version
 
@@ -90,6 +91,7 @@ jobs:
               environment:
                 TELEGRAM_BOT_TOKEN: dummy
                 TELEGRAM_CHAT_ID: dummy
+                CI_MODE: "true"
           EOF
           docker compose -f compose.yml up -d
           sleep 30

@@ -5,6 +5,7 @@ log(){ echo "[entrypoint] $*"; }
 
 MODEM_DEVICE="${MODEM_DEVICE:-}"
 LOGLEVEL="${LOGLEVEL:-1}"
+CI_MODE="${CI_MODE:-false}"
 GAMMU_SPOOL_PATH="${GAMMU_SPOOL_PATH:-/var/spool/gammu}"
 GAMMU_CONFIG_PATH="${GAMMU_CONFIG_PATH:-/tmp/gammu-smsdrc}"
 
@@ -60,6 +61,18 @@ logfile = /dev/stdout
 EOF_CONF
 }
 
+if [ "$CI_MODE" = "true" ]; then
+    if dev=$(find_modem); then
+        generate_config "$dev"
+        log "✅  Using modem $dev"
+        gammu-smsd -c "$GAMMU_CONFIG_PATH"
+        exit $?
+    else
+        log "CI_MODE enabled – skipping modem loop"
+        exit 0
+    fi
+fi
+
 while true; do
     if dev=$(find_modem); then
         generate_config "$dev"
@@ -67,7 +80,7 @@ while true; do
         if gammu-smsd -c "$GAMMU_CONFIG_PATH"; then
             log "gammu-smsd exited normally"
         else
-            log "gammu-smsd crashed, restarting" 
+            log "gammu-smsd crashed, restarting"
         fi
     else
         log "Waiting for modem ..."
