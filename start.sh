@@ -34,4 +34,9 @@ else
     log "Using existing smsdrc from volume"
 fi
 
+if [ "${1:-}" = "--dry-run" ]; then
+    log "Dry run requested - not starting gammu-smsd"
+    exit 0
+fi
+
 exec gammu-smsd -c /etc/gammu-smsdrc
