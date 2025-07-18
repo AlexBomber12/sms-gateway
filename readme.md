@@ -1,62 +1,45 @@
-## SMS-Gateway → Telegram
-Контейнер пересылает все входящие SMS с USB-модема (Huawei E352 и подобные) в чат Telegram.  
-Исходный Python-скрипт читает переменные `SMS_*` от `gammu-smsd`, поэтому файлы не парсятся.
+# SMS Gateway → Telegram
 
-## Запуск
-git clone git@github.com:AlexBomber12/sms-gateway.git
-cd sms-gateway
-cp .env.example .env          # впиши токен и chat-id
-docker compose up -d          # build + start
+This container forwards incoming SMS from a USB modem (tested with Huawei E352) to a Telegram chat. It should work with any modem supported by `gammu`.
 
-## Перезапустить
-cd ~/sms-gateway
-docker compose down
+## Environment variables
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DEVICE` | Path to the modem device | `/dev/ttyUSB0` |
+| `BAUDRATE` | Serial baud rate | `115200` |
+| `TELEGRAM_BOT_TOKEN` | Telegram bot token used for sending messages | `123:ABC` |
+| `TELEGRAM_CHAT_ID` | Telegram chat ID that will receive messages | `123456` |
+| `LOGLEVEL` | Optional gammu debug level (1..3) | `1` |
+
+Copy `.env.example` to `.env` and fill in these values.
+
+## Usage
+### Option 1: pull ready image
+```bash
+docker pull ghcr.io/owner/sms-gateway:latest
+cp .env.example .env
 docker compose up -d
+```
 
-## Мини-чек-лист «почему SMS не доходят»
-(идём сверху вниз и останавливаемся, как только пункт выполняется)
+### Option 2: build locally
+```bash
+git clone https://github.com/owner/sms-gateway.git
+cd sms-gateway
+cp .env.example .env
+docker compose up -d
+# or for local testing
+python3 on_receive.py
+```
 
-1. Есть ли порты на хосте?
-ls -l /dev/ttyUSB*
-Нет устройств → выдерни-вставь свисток или поставь usb-modeswitch.
+The container runs as root because USB devices usually require privileged access.
 
-2. Порт свободен?
-sudo fuser -v /dev/ttyUSB0
-Виден ModemManager / gpsd — sudo systemctl stop -sms-gateway && disable.
+### Volumes
+- `./state` → `/var/spool/gammu` – incoming/outgoing SMS and log files
+- `./smsdrc` → `/etc/gammu-smsdrc` – override gammu configuration
 
-3. Конфиг чистый?
-nano smsdrc; первые строки должны быть ТОЛЬКО
-[gammu]
-device = /dev/ttyUSB0
-connection = at
-без # в той же строке.
-
-4. Compose реально пробрасывает устройства?
-В docker-compose.yml у сервиса:
-privileged: true
-devices:
-  - "${DEVICE}:${DEVICE}"
-Сохрани, затем docker compose down && docker compose up -d.
-
-5. Порты видны внутри контейнера?
-docker exec -it sms-gateway ls /dev/ttyUSB*
-Если пусто — п. 4 исправлен неверно (отступы) или запускаешь не тот compose-файл.
-
-6. Модем отвечает?
-docker exec -it sms-gateway gammu -c /etc/gammu-smsdrc --identify
-«Error opening device» → поменяй device = /dev/ttyUSB1 или 2 и повтори.
-
-7. Демон инициализировался?
-docker logs -f sms-gateway | tail
-Нужно увидеть: SMSD initialized, waiting for messages...
-Если снова про ошибку открытия порта — вернись к пункту 6.
-
-8. Сообщение ушло в Telegram?
-Отправь SMS на SIM, затем посмотри лог:
-sms_to_telegram.sh: Sent OK to Telegram chat_id …
-Нет этой строки:
-401 / 403 — неверный токен или Chat ID в .env;
-«retry in 300s» — временно нет интернета.
-
-После прохождения всех пунктов пересылка гарантированно работает.
-
+## Troubleshooting
+1. **Ports are visible on host?** `ls -l /dev/ttyUSB*`
+2. **Port free?** `sudo fuser -v /dev/ttyUSB0`
+3. **Modem responds?** `docker exec -it sms-gateway gammu -c /etc/gammu-smsdrc --identify`
+4. **Service initialized?** `docker logs -f sms-gateway | tail`
+5. **Message delivered to Telegram?** Check container logs for errors.
