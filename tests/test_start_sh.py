@@ -21,7 +21,8 @@ class TestStartScript(unittest.TestCase):
             config.unlink()
         if spool.exists():
             subprocess.run(['rm', '-rf', str(spool)], check=True)
-        subprocess.run(['bash', 'start.sh', '--dry-run'], check=True, env=env)
+        script = Path(__file__).resolve().parents[1] / 'start.sh'
+        subprocess.run(['bash', str(script), '--dry-run'], check=True, env=env)
         self.assertTrue(config.exists())
         self.assertTrue(spool.exists())
         config.unlink()
