@@ -5,11 +5,14 @@ RUN apt-get update && \
         gammu gammu-smsd usbutils procps && \
     rm -rf /var/lib/apt/lists/*
 
+RUN usermod -a -G dialout root
+
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 WORKDIR /app
 COPY . /app
 RUN chmod +x /app/start.sh
-
-ENTRYPOINT ["/app/start.sh"]
+COPY entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
