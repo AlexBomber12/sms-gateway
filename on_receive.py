@@ -6,12 +6,12 @@ import os
 import re
 import sys
 import time
-from typing import Iterable, Tuple
+from typing import Iterable, Tuple, Optional, List
 
 import requests
 
 
-def get_env(name: str, required: bool = True, default: str | None = None) -> str:
+def get_env(name: str, required: bool = True, default: Optional[str] = None) -> str:
     """Get environment variable and optionally require it."""
     value = os.getenv(name, default)
     if required and not value:
@@ -23,7 +23,7 @@ def parse_sms(parts: int, getenv=os.getenv) -> Tuple[str, str]:
     """Assemble multipart SMS from environment variables."""
     number = getenv("SMS_1_NUMBER", "unknown").strip()
     messages: Iterable[str] = []
-    collected: list[str] = []
+    collected: List[str] = []
     for i in range(1, parts + 1):
         text = getenv(f"SMS_{i}_TEXT")
         if text is not None:
