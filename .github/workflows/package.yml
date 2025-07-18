@@ -27,12 +27,17 @@ jobs:
           push: false
           load: true
 
-      - name: Unit tests inside container
-        run: |
-          docker run --rm \
-            -e CI_MODE=true \
-            ghcr.io/${{ steps.meta.outputs.repo }}:${{ github.sha }} \
-            python -m pytest -q
+        - name: Unit tests inside container
+          run: |
+            docker run --rm \
+              -e CI_MODE=true \
+              ghcr.io/${{ steps.meta.outputs.repo }}:${{ github.sha }} \
+              python -m pytest -q
+
+        - name: Smoke test container
+          run: |
+            IMAGE="ghcr.io/${{ steps.meta.outputs.repo }}:${{ github.sha }}"
+            docker run --rm -e CI_MODE=true "$IMAGE" /bin/true
 
       - uses: docker/build-push-action@v5
         with:

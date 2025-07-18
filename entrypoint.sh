@@ -4,8 +4,8 @@ set -euo pipefail
 # ---- 0. Immediate bypasses ---------------------------------------------
 # (1) CI tells us explicitly not to wait for hardware
 if [[ "${CI_MODE:-}" == "true" ]]; then
-  echo "[entrypoint] CI_MODE=true – skipping modem scan"
-  exec "$@" 2>/dev/null || exec sleep infinity
+  echo "[entrypoint] CI_MODE=true – modem scan disabled, exiting"
+  exit 0
 fi
 
 # (2) A command was supplied -> run it and exit
