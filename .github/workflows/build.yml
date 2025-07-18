@@ -67,5 +67,6 @@ jobs:
           IMAGE=$(echo "${{ steps.vars.outputs.tags }}" | cut -d',' -f1)
           docker run --rm -e DEVICE=/dev/null -e BAUDRATE=9600 \
             -e TELEGRAM_BOT_TOKEN=dummy -e TELEGRAM_CHAT_ID=dummy \
+            -e GAMMU_SPOOL_PATH=/tmp/gammu -e GAMMU_CONFIG_PATH=/tmp/smsdrc \
             "$IMAGE" --dry-run
           docker run --rm --entrypoint gammu-smsd "$IMAGE" --version

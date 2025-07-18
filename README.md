@@ -17,6 +17,12 @@ This project provides a simple gateway that forwards incoming SMS messages from 
    docker compose up -d
    ```
 
+For local testing without root, you can set:
+```sh
+export GAMMU_SPOOL_PATH=/tmp/gammu-spool
+export GAMMU_CONFIG_PATH=/tmp/smsdrc
+```
+
 ## Environment variables
 | Variable | Description | Example |
 |----------|-------------|---------|
@@ -25,6 +31,8 @@ This project provides a simple gateway that forwards incoming SMS messages from 
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token used for sending messages | `123:ABC` |
 | `TELEGRAM_CHAT_ID` | Telegram chat ID that will receive messages | `123456` |
 | `LOGLEVEL` | Optional gammu debug level (1..3) | `1` |
+| `GAMMU_SPOOL_PATH` | Path used for gammu spool directories | `/var/spool/gammu` |
+| `GAMMU_CONFIG_PATH` | Path to generated smsdrc file | `/etc/gammu-smsdrc` |
 
 Copy `.env.example` to `.env` and fill in these values before starting the container.
 
@@ -44,9 +52,11 @@ The container runs as root because USB devices usually require privileged access
 - `./smsdrc` → `/etc/gammu-smsdrc` – override gammu configuration
 
 ## Running Tests Locally
-Install dependencies and run the test suite:
+Install dependencies and run the test suite (no root needed):
 ```sh
 pip install -r requirements.txt
+GAMMU_SPOOL_PATH=/tmp/gammu-test \
+GAMMU_CONFIG_PATH=/tmp/gammu-smsdrc \
 python -m unittest discover -s tests -v
 ```
 

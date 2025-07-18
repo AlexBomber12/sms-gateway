@@ -13,13 +13,19 @@ class TestStartScript(unittest.TestCase):
             'TELEGRAM_BOT_TOKEN': 'x',
             'TELEGRAM_CHAT_ID': 'x',
         })
-        config = Path('/etc/gammu-smsdrc')
+        spool = Path('/tmp/gammu-test-spool')
+        config = Path('/tmp/gammu-test-config')
+        env['GAMMU_SPOOL_PATH'] = str(spool)
+        env['GAMMU_CONFIG_PATH'] = str(config)
         if config.exists():
             config.unlink()
+        if spool.exists():
+            subprocess.run(['rm', '-rf', str(spool)], check=True)
         subprocess.run(['bash', 'start.sh', '--dry-run'], check=True, env=env)
         self.assertTrue(config.exists())
+        self.assertTrue(spool.exists())
         config.unlink()
-        self.assertTrue(Path('/var/spool/gammu').exists())
+        subprocess.run(['rm', '-rf', str(spool)], check=True)
 
 
 if __name__ == '__main__':
