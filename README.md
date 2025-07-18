@@ -95,7 +95,8 @@ Release with:
 git tag vX.Y.Z && git push --tags
 ```
 
-For hardware-less pipelines set `CI_MODE=true` so the entrypoint exits if no modem is found.
+Set `CI_MODE=true` in CI pipelines to disable the modem detection loop. Passing
+a command after the image name also bypasses the loop.
 
 ## Troubleshooting
 1. **Ports are visible on host?** `ls -l /dev/ttyUSB*`
