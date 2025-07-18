@@ -43,3 +43,10 @@ The container runs as root because USB devices usually require privileged access
 3. **Modem responds?** `docker exec -it sms-gateway gammu -c /etc/gammu-smsdrc --identify`
 4. **Service initialized?** `docker logs -f sms-gateway | tail`
 5. **Message delivered to Telegram?** Check container logs for errors.
+
+## Running tests
+Install dependencies and run the test suite:
+```bash
+pip install -r requirements.txt
+python3 -m unittest discover -s tests -v
+```

@@ -5,7 +5,8 @@ RUN apt-get update && \
         gammu gammu-smsd usbutils procps && \
     rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir requests
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 WORKDIR /app
 COPY . /app
