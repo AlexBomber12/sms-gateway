@@ -1,8 +1,7 @@
 [gammu]
 device = /dev/ttyUSB0
 connection = at
+baudrate = 115200
+
 [smsd]
-service = sql
-driver  = sqlite
-dbdir   = /var/lib/gammu
-runonreceive = /opt/sms_to_telegram.sh
+service = files
