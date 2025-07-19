@@ -91,8 +91,9 @@ The Docker image is published to GitHub Container Registry whenever a git tag is
 
 Release with:
 
-```sh
-git tag vX.Y.Z && git push --tags
+```bash
+git tag -a vX.Y.Z -m "release vX.Y.Z"
+git push origin vX.Y.Z            # triggers the package workflow
 ```
 
 Set `CI_MODE=true` in CI pipelines to disable the modem detection loop. When no
