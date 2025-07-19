@@ -1,0 +1,10 @@
+services:
+  smsgateway:
+    image: ${IMAGE}
+    environment:
+      TELEGRAM_BOT_TOKEN: dummy
+      TELEGRAM_CHAT_ID: dummy
+      CI_MODE: "true"
+    group_add:
+      - dialout
+    restart: "no"
