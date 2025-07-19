@@ -1,60 +1,67 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ---- 0. Immediate bypasses ---------------------------------------------
-# Skip the modem scan entirely during CI or when explicitly requested. If a
-# command is supplied it is executed before exiting.
-if [[ "${CI_MODE:-}" == "true" || "${SKIP_MODEM:-}" == "true" ]]; then
-  echo "[entrypoint] Modem scan disabled."
-  [[ $# -gt 0 ]] && exec "$@"
-  exit 0
-fi
+log() {
+  echo "[entrypoint] $*"
+}
 
-# ---- 1. Normal production path (modem auto-scan once) -------------------
-
-log(){ echo "[entrypoint] $*"; }
-
-LOGLEVEL="${LOGLEVEL:-1}"
-GAMMU_SPOOL_PATH="${GAMMU_SPOOL_PATH:-/var/spool/gammu}"
-
-mkdir -p "$GAMMU_SPOOL_PATH"/{inbox,outbox,sent,error,archive}
-
-# ---- 2. Detect modem ----------------------------------------------------
-# ------------------------------------------------------------------
-# 1. build candidate list
-CANDIDATES=()
-[ -n "${MODEM_PORT}" ] && CANDIDATES+=("${MODEM_PORT}")
-CANDIDATES+=(/dev/serial/by-id/* /dev/ttyUSB*)
-
-# 2. probe each candidate
-for DEV in "${CANDIDATES[@]}"; do
-  [ -e "${DEV}" ] || continue
-
-  # create minimal config for the probe
-  cat > /tmp/gammurc <<EOF
+generate_config() {
+  local dev="$1"
+  cat > /tmp/gammu-smsdrc <<EOF
 [gammu]
-device = ${DEV}
-connection = at
-EOF
-
-  # give up after 12 s if no reply
-  if timeout 12 gammu --config /tmp/gammurc identify >/dev/null 2>&1; then
-    echo "✅ Using modem ${DEV}"
-
-    # full config for smsd
-    cat > /tmp/gammu-smsdrc <<EOF
-[gammu]
-device = ${DEV}
+device = ${dev}
 connection = at
 
 [smsd]
 service = files
 EOF
+  ln -sf /tmp/gammu-smsdrc /tmp/gammurc
+}
 
-    exec gammu-smsd -c /tmp/gammu-smsdrc -f
-  fi
-done
+probe_modem() {
+  timeout 12 gammu --identify -c /tmp/gammu-smsdrc >/dev/null 2>&1
+}
 
-echo "❌ No responsive modem found"
-exit 1
-# ------------------------------------------------------------------
+detect_modem() {
+  local start=$SECONDS
+  local deadline=$((start + 30))
+  local candidates=( )
+  [[ -n "${MODEM_PORT:-}" ]] && candidates+=("${MODEM_PORT}")
+  candidates+=(/dev/serial/by-id/* /dev/ttyUSB*)
+
+  while (( SECONDS < deadline )); do
+    for dev in "${candidates[@]}"; do
+      [[ -e "$dev" ]] || continue
+      generate_config "$dev"
+      if probe_modem; then
+        DEV="$dev"
+        export DEV
+        log "✅ Using ${DEV}"
+        return 0
+      fi
+    done
+    sleep 1
+  done
+  log "Modem not found"
+  return 70
+}
+
+main() {
+  LOGLEVEL="${LOGLEVEL:-1}"
+  GAMMU_SPOOL_PATH="${GAMMU_SPOOL_PATH:-/var/spool/gammu}"
+  mkdir -p "$GAMMU_SPOOL_PATH"/{inbox,outbox,sent,error,archive}
+
+  detect_modem || exit 70
+
+  exec gammu-smsd -c /tmp/gammu-smsdrc -f
+}
+
+# ---- Immediate bypasses -------------------------------------------------
+# Skip the modem scan entirely during CI or when explicitly requested.
+if [[ "${CI_MODE:-}" == "true" || "${SKIP_MODEM:-}" == "true" ]]; then
+  log "Modem scan disabled."
+  [[ $# -gt 0 ]] && exec "$@"
+  exit 0
+fi
+
+main "$@"

@@ -4,6 +4,7 @@ services:
     image: ghcr.io/alexbomber12/sms-gateway:${SMSGW_VERSION}
     build: .
     group_add: [dialout]
+    privileged: true
     devices:
       - /dev/serial/by-id/:/dev/serial/by-id/
     env_file:
