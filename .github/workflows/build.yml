@@ -14,20 +14,15 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install python deps
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt -r requirements-dev.txt
 
       - name: Lint
         run: python -m py_compile on_receive.py
 
-      - name: Run unit tests and fail if none are found
-        run: |
-          set -e
-          output=$(python -m unittest discover -s tests -v)
-          echo "$output"
-          if echo "$output" | grep -q 'Ran 0 tests'; then
-            echo "ERROR: No tests were executed."
-            exit 1
-          fi
+      - name: Run tests
+        env:
+          CI_MODE: "true"
+        run: pytest -v
 
       - name: Set image tags
         if: github.event_name != 'pull_request'
