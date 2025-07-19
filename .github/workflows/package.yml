@@ -1,5 +1,6 @@
+---
 name: package
-on:
+'on':
   push:
     tags:
       - '*'                            # run on every tag
@@ -15,7 +16,9 @@ jobs:
 
       - id: meta
         name: lowercase repo
-        run: echo "repo=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+        run: |
+          repo=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')
+          echo "repo=$repo" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
@@ -29,7 +32,7 @@ jobs:
       - uses: docker/build-push-action@v5
         with:
           context: .
-          tags: ghcr.io/${{ steps.meta.outputs.repo }}:${{ github.sha }}
+          tags: "${{ format('ghcr.io/{0}:{1}', steps.meta.outputs.repo, github.sha) }}"
           push: false
           load: true
 
@@ -48,7 +51,7 @@ jobs:
         with:
           context: .
           tags: |
-            ghcr.io/${{ steps.meta.outputs.repo }}:${{ github.ref_name }}
-            ghcr.io/${{ steps.meta.outputs.repo }}:latest
+            ${{ format('ghcr.io/{0}:{1}', steps.meta.outputs.repo, github.ref_name) }}
+            ${{ format('ghcr.io/{0}:latest', steps.meta.outputs.repo) }}
           push: true
           load: false
