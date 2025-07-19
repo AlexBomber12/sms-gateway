@@ -1,5 +1,7 @@
 FROM python:3.12-slim
 
+ARG INSTALL_DEV_DEPS="false"
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         gammu gammu-smsd usbutils procps && \
@@ -8,7 +10,11 @@ RUN apt-get update && \
 RUN usermod -a -G dialout root
 
 COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+COPY requirements-dev.txt /tmp/requirements-dev.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt \
+    && if [ "$INSTALL_DEV_DEPS" = "true" ]; then \
+        pip install --no-cache-dir -r /tmp/requirements-dev.txt; \
+    fi
 
 WORKDIR /app
 COPY . /app
