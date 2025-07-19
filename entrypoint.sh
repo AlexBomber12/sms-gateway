@@ -20,40 +20,41 @@ GAMMU_SPOOL_PATH="${GAMMU_SPOOL_PATH:-/var/spool/gammu}"
 mkdir -p "$GAMMU_SPOOL_PATH"/{inbox,outbox,sent,error,archive}
 
 # ---- 2. Detect modem ----------------------------------------------------
-if [ -n "${MODEM_PORT:-}" ]; then
-    CANDIDATES=("${MODEM_PORT}")
-else
-    CANDIDATES=(/dev/serial/by-id/* /dev/ttyUSB*)
-fi
+# ------------------------------------------------------------------
+# 1. build candidate list
+CANDIDATES=()
+[ -n "${MODEM_PORT}" ] && CANDIDATES+=("${MODEM_PORT}")
+CANDIDATES+=(/dev/serial/by-id/* /dev/ttyUSB*)
 
-MODEM_DEV=""
+# 2. probe each candidate
 for DEV in "${CANDIDATES[@]}"; do
-    [ -e "$DEV" ] || continue
-    cat > /tmp/gammurc <<EOF
+  [ -e "${DEV}" ] || continue
+
+  # create minimal config for the probe
+  cat > /tmp/gammurc <<EOF
 [gammu]
-device = $DEV
+device = ${DEV}
 connection = at
 EOF
-    if timeout 3 gammu --config /tmp/gammurc identify >/dev/null 2>&1; then
-        log "✅ Using modem $DEV"
-        MODEM_DEV="$DEV"
-        break
-    fi
-done
 
-if [ -z "$MODEM_DEV" ]; then
-    log "❌ No responsive modem found"
-    exit 1
-fi
+  # give up after 12 s if no reply
+  if timeout 12 gammu --config /tmp/gammurc identify >/dev/null 2>&1; then
+    echo "✅ Using modem ${DEV}"
 
-# ---- 3. Generate SMSD configuration ------------------------------------
-cat > /tmp/gammu-smsdrc <<EOF
+    # full config for smsd
+    cat > /tmp/gammu-smsdrc <<EOF
 [gammu]
-device = $MODEM_DEV
+device = ${DEV}
 connection = at
 
 [smsd]
 service = files
 EOF
 
-exec gammu-smsd -c /tmp/gammu-smsdrc -f
+    exec gammu-smsd -c /tmp/gammu-smsdrc -f
+  fi
+done
+
+echo "❌ No responsive modem found"
+exit 1
+# ------------------------------------------------------------------
