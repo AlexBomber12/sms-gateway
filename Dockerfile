@@ -17,7 +17,9 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt \
     fi
 
 WORKDIR /app
+ENV PYTHONPATH="/app:${PYTHONPATH}"
 COPY . /app
+RUN pip install --no-cache-dir -e .
 RUN chmod +x /app/start.sh
 COPY entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
