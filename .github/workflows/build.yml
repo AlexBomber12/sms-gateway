@@ -49,7 +49,7 @@ jobs:
 
       - name: shellcheck entrypoint
         if: github.event_name != 'pull_request'
-        uses: ludeeus/action-shellcheck@v2
+        uses: ludeeus/action-shellcheck@v1
         with:
           check_together: 'entrypoint.sh'
 
