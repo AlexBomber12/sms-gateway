@@ -47,10 +47,15 @@ jobs:
             ghcr.io/${{ steps.meta.outputs.repo }}:${{ github.sha }} \
             python -m pytest -q
 
-      - name: smoke test
+      - name: smoke test with compose
         run: |
-          docker run --rm -e CI_MODE=true \
-            ghcr.io/${{ steps.meta.outputs.repo }}:${{ github.sha }} /bin/true
+          IMAGE="ghcr.io/${{ steps.meta.outputs.repo }}:${{ github.sha }}"
+          export IMAGE
+          docker compose -f compose.ci.yml up -d
+          sleep 20
+          docker compose -f compose.ci.yml ps
+          docker compose -f compose.ci.yml logs smsgateway
+          docker compose -f compose.ci.yml down
 
       - uses: docker/build-push-action@v5
         with:

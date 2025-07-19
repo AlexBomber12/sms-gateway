@@ -83,27 +83,16 @@ jobs:
             "$IMAGE" /bin/true
           docker run --rm --entrypoint gammu-smsd "$IMAGE" --version
 
-      - name: Compose up (no modem)
+      - name: smoke test with compose
         if: github.event_name != 'pull_request'
         run: |
           IMAGE=$(echo "${{ steps.vars.outputs.tags }}" | cut -d',' -f1)
-          cat > compose.yml <<EOF
-          services:
-            smsgateway:
-              image: $IMAGE
-              group_add:
-                - dialout
-              devices:
-                - /dev/serial/by-id/:/dev/serial/by-id/
-              environment:
-                TELEGRAM_BOT_TOKEN: dummy
-                TELEGRAM_CHAT_ID: dummy
-                CI_MODE: "true"
-          EOF
-          docker compose -f compose.yml up -d
-          sleep 30
-          docker compose -f compose.yml ps
-          docker compose -f compose.yml down
+          export IMAGE
+          docker compose -f compose.ci.yml up -d
+          sleep 20
+          docker compose -f compose.ci.yml ps
+          docker compose -f compose.ci.yml logs smsgateway
+          docker compose -f compose.ci.yml down
 
       - uses: docker/login-action@v3
         if: github.event_name != 'pull_request'
