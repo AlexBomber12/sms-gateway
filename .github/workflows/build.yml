@@ -55,6 +55,7 @@ jobs:
           context: .
           load: true
           tags: ${{ steps.vars.outputs.tags }}
+          build-args: INSTALL_DEV_DEPS=true
 
       - name: Run all tests inside built Docker image
         if: github.event_name != 'pull_request'
@@ -65,7 +66,7 @@ jobs:
             -e DEVICE=/dev/null -e BAUDRATE=9600 \
             -e TELEGRAM_BOT_TOKEN=dummy -e TELEGRAM_CHAT_ID=dummy \
             -e GAMMU_SPOOL_PATH=/tmp/gammu -e GAMMU_CONFIG_PATH=/tmp/smsdrc \
-            "$IMAGE" python3 -m unittest discover -s tests -v
+            "$IMAGE" pytest -v
 
       - name: Smoke test container
         if: github.event_name != 'pull_request'
