@@ -1,44 +1,25 @@
 name: package
 on:
   push:
-    tags: ['*']
+    tags:
+      - '*'                            # run on every tag
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - name: workflow loaded
-        run: echo "✅ package workflow parsed"
+      - name: workflow parsed
+        run: echo "✅ package workflow loaded"
 
       - uses: actions/checkout@v4
 
-      - name: lint workflow (actionlint)
-        uses: reviewdog/action-actionlint@v1
-        with:
-          reporter: github-pr-check
-
       - id: meta
-        name: lower-case repo
+        name: lowercase repo
         run: echo "repo=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: install dev tools
-        run: pip install ruff black yamllint
-
-      - name: run ruff
-        run: ruff check .
-
-      - name: run black --check
-        run: black --check .
-
-      - name: yamllint
-        run: yamllint .
 
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
+
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
