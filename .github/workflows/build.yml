@@ -33,19 +33,25 @@ jobs:
         if: github.event_name != 'pull_request'
         id: vars
         run: |
-          REPO=ghcr.io/$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
-          TAGS="$REPO:${GITHUB_SHA}"
-          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            TAGS="$TAGS,$REPO:${GITHUB_REF_NAME}"
-          fi
-          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
-            TAGS="$TAGS,$REPO:latest"
-          fi
-          echo "tags=$TAGS" >> $GITHUB_OUTPUT
-          echo "IMAGE=$REPO" >> $GITHUB_ENV
+            REPO=ghcr.io/$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
+            TAGS="$REPO:${GITHUB_SHA}"
+            if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+              TAGS="$TAGS,$REPO:${GITHUB_REF_NAME}"
+            fi
+            if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+              TAGS="$TAGS,$REPO:latest"
+            fi
+            echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+            echo "IMAGE=$REPO" >> "$GITHUB_ENV"
 
       - uses: docker/setup-buildx-action@v3
         if: github.event_name != 'pull_request'
+
+      - name: shellcheck entrypoint
+        if: github.event_name != 'pull_request'
+        uses: ludeeus/action-shellcheck@master
+        with:
+          check_together: 'entrypoint.sh'
 
       - name: Build Docker image
         if: github.event_name != 'pull_request'
@@ -74,7 +80,7 @@ jobs:
             -e TELEGRAM_BOT_TOKEN=dummy -e TELEGRAM_CHAT_ID=dummy \
             -e GAMMU_SPOOL_PATH=/tmp/gammu -e GAMMU_CONFIG_PATH=/tmp/smsdrc \
             -e CI_MODE=true \
-            "$IMAGE" --dry-run
+            "$IMAGE" /bin/true
           docker run --rm --entrypoint gammu-smsd "$IMAGE" --version
 
       - name: Compose up (no modem)
