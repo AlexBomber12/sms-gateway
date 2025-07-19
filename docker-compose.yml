@@ -4,6 +4,7 @@ services:
     image: ghcr.io/alexbomber12/sms-gateway:${SMSGW_VERSION}
     build: .
     group_add: [dialout]
+    privileged: true
     devices:
       - /dev/serial/by-id/:/dev/serial/by-id/
     env_file:
@@ -12,7 +13,7 @@ services:
     volumes:
       - ./state:/var/spool/gammu
     healthcheck:
-      test: ["CMD-SHELL", "gammu --identify -c /tmp/gammu-smsdrc >/dev/null 2>&1"]
+      test: ["CMD-SHELL", "gammu identify -c /tmp/gammurc >/dev/null 2>&1"]
       interval: 30s
       timeout: 5s
       retries: 3
