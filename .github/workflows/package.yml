@@ -24,7 +24,7 @@ jobs:
       - uses: docker/setup-buildx-action@v3
 
       - name: shellcheck entrypoint
-        uses: ludeeus/action-shellcheck@v1
+        uses: ludeeus/action-shellcheck@master
         with:
           check_together: 'entrypoint.sh'
 
