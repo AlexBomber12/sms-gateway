@@ -74,10 +74,10 @@ The container runs as root because USB devices usually require privileged access
 ## Running Tests Locally
 Install dependencies and run the test suite (no root needed):
 ```sh
-pip install -r requirements.txt
+pip install -r requirements.txt -r requirements-dev.txt
 GAMMU_SPOOL_PATH=/tmp/gammu-test \
 GAMMU_CONFIG_PATH=/tmp/gammu-smsdrc \
-python -m unittest discover -s tests -v
+pytest -q
 ```
 
 The CI pipeline runs these tests both on the host and again inside the built

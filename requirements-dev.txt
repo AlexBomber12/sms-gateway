@@ -1,4 +1,6 @@
+pytest
+pytest-mock
 ruff
 black
+pre-commit
 yamllint
-actionlint

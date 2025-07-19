@@ -2,9 +2,11 @@ import os
 import subprocess
 import unittest
 from pathlib import Path
+import pytest
 
 
 class TestStartScript(unittest.TestCase):
+    @pytest.mark.skipif(os.getenv("CI_MODE") == "true", reason="HW not present")
     def test_dry_run(self):
         env = os.environ.copy()
         env.update(
