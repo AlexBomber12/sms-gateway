@@ -2,15 +2,12 @@
 set -euo pipefail
 
 # ---- 0. Immediate bypasses ---------------------------------------------
-# (1) CI tells us explicitly not to wait for hardware
-if [[ "${CI_MODE:-}" == "true" ]]; then
-  echo "[entrypoint] CI_MODE=true – modem scan disabled, exiting"
+# Skip the modem scan entirely during CI or when explicitly requested. If a
+# command is supplied it is executed before exiting.
+if [[ "${CI_MODE:-}" == "true" || "${SKIP_MODEM:-}" == "true" ]]; then
+  echo "[entrypoint] Modem scan disabled."
+  [[ $# -gt 0 ]] && exec "$@"
   exit 0
-fi
-
-# (2) A command was supplied -> run it and exit
-if [[ $# -gt 0 ]]; then
-  exec "$@"
 fi
 
 # ---- 1. Normal production path (modem auto-scan loop) -------------------

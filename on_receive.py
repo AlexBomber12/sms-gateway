@@ -52,7 +52,9 @@ def send_to_telegram(bot_token: str, chat_id: str, number: str, text: str) -> No
             requests.post(url, json=payload, timeout=10).raise_for_status()
             logging.info("Sent SMS from %s to Telegram", number)
             return
-        except Exception as exc:  # pragma: no cover - network failure is ignored in tests
+        except (
+            Exception
+        ) as exc:  # pragma: no cover - network failure is ignored in tests
             logging.warning("Send failed (attempt %s): %s", attempt + 1, exc)
             time.sleep(30)
     logging.error("Failed to send SMS after retries")
