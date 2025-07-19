@@ -10,8 +10,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # lowercase repo → outputs.repo
       - id: meta
-        name: Prepare meta (lower-case repo)
+        name: Prepare meta
         run: echo "repo=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - uses: docker/setup-qemu-action@v3
@@ -23,7 +24,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build for tests (local load only)
+      # 1️⃣  Build image once, load into daemon for testing
       - uses: docker/build-push-action@v5
         with:
           context: .
@@ -31,19 +32,20 @@ jobs:
           push: false
           load: true
 
+      # 2️⃣  Run unit tests inside that image
       - name: Unit tests inside container
         run: |
-          docker run --rm \
-            -e CI_MODE=true \
+          docker run --rm -e CI_MODE=true \
             ghcr.io/${{ steps.meta.outputs.repo }}:${{ github.sha }} \
             python -m pytest -q
 
+      # 3️⃣  Smoke-test: container starts & exits 0 in CI mode
       - name: Smoke test container
         run: |
           IMAGE="ghcr.io/${{ steps.meta.outputs.repo }}:${{ github.sha }}"
           docker run --rm -e CI_MODE=true "$IMAGE" /bin/true
 
-      # Final build & push (version tag + latest)
+      # 4️⃣  Re-build (cache-hit) and push version + latest tags
       - uses: docker/build-push-action@v5
         with:
           context: .
@@ -52,4 +54,3 @@ jobs:
             ghcr.io/${{ steps.meta.outputs.repo }}:latest
           push: true
           load: false
-
