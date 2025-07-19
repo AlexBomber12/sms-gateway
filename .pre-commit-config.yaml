@@ -1,0 +1,18 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff
+    rev: v0.4.5
+    hooks:
+      - id: ruff
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+      - id: black
+        args: ["--safe"]
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.6.24
+    hooks:
+      - id: actionlint
