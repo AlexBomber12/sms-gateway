@@ -2,6 +2,7 @@ import os
 import shutil
 import subprocess
 import time
+from pathlib import Path
 import pytest
 
 
@@ -20,6 +21,9 @@ docker_required = pytest.mark.skipif(not docker_available(), reason="docker unav
 
 @docker_required
 def test_compose_service_healthy():
+    env = Path(".env")
+    if not env.exists():
+        env.write_text("SMSGW_VERSION=test\n")
     subprocess.run(["docker", "compose", "up", "-d"], check=True)
     try:
         deadline = time.time() + 60
@@ -55,3 +59,5 @@ def test_compose_service_healthy():
         )
     finally:
         subprocess.run(["docker", "compose", "down", "-v"], check=False)
+        if env.exists():
+            env.unlink()
