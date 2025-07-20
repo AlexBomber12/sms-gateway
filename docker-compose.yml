@@ -2,7 +2,8 @@ services:
   smsgateway:
     container_name: smsgateway
     image: ghcr.io/alexbomber12/sms-gateway:${SMSGW_VERSION}
-    group_add: [dialout]
+    group_add:
+      - dialout
     privileged: true
     devices:
       - /dev/ttyUSB0:/dev/ttyUSB0
