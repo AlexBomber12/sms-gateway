@@ -25,6 +25,7 @@ RunOnReceive = python3 /app/on_receive.py
 logfile      = /dev/stdout
 EOF_CONF
   ln -sf /tmp/gammu-smsdrc /tmp/gammurc
+  export GAMMU_CONFIG=/tmp/gammu-smsdrc
 }
 
 use_mounted_config() {
@@ -36,6 +37,7 @@ use_mounted_config() {
     log "Using smsdrc from volume"
     cp /etc/gammu-smsdrc /tmp/gammu-smsdrc
     ln -sf /tmp/gammu-smsdrc /tmp/gammurc
+    export GAMMU_CONFIG=/tmp/gammu-smsdrc
     return 0
   fi
   return 1
@@ -110,7 +112,6 @@ main() {
   fi
 
   export GAMMU_CONFIG=/tmp/gammu-smsdrc
-  args=( -c /tmp/gammu-smsdrc )
 
   if [[ -n "${LOGLEVEL:-}" ]]; then
     grep -q '^\[smsd\]' /tmp/gammu-smsdrc || echo '[smsd]' >> /tmp/gammu-smsdrc
@@ -118,8 +119,7 @@ main() {
     sed -i '/^\[smsd\]/a DebugLevel = '"$LOGLEVEL"'' /tmp/gammu-smsdrc
   fi
 
-  [[ "${FOREGROUND:-false}" != "true" ]] && args+=( --daemon )
-  exec gammu-smsd "${args[@]}"
+  exec gammu-smsd -c /tmp/gammu-smsdrc
 }
 
 # ---- Immediate bypasses -------------------------------------------------
