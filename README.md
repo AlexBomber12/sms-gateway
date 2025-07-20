@@ -1,114 +1,86 @@
 # SMS Gateway → Telegram
 
-This project provides a simple gateway that forwards incoming SMS messages from a USB modem to a Telegram chat using `gammu`.
+This container forwards incoming SMS messages from a USB GSM modem to a Telegram chat.
 
-## Quickstart
-1. Pull the image from GitHub Container Registry
-   ```sh
-   docker pull ghcr.io/owner/sms-gateway:latest
-   ```
-2. Copy the example environment file and edit it
-   ```sh
+## A. Requirements
+- Docker and Docker Compose installed
+- A compatible USB GSM modem (e.g., Huawei E353) connected and recognized (e.g., `/dev/ttyUSB0`)
+- SIM card inserted and PIN unlocked
+
+## B. Quick Start
+1. Copy `.env.example` to `.env` and edit it:
+   ```bash
    cp .env.example .env
-   # edit .env with your values
+   nano .env
    ```
-3. Start the service
-   ```sh
+2. Run the gateway:
+   ```bash
    docker compose up -d
+   docker logs -f smsgateway
+   ```
+   Expected logs:
+   ```
+   [entrypoint] ✅ Using pre-set /dev/ttyUSB0
+   Starting phone communication...
    ```
 
-For local testing without root, you can set:
-```sh
-export GAMMU_SPOOL_PATH=/tmp/gammu-spool
-export GAMMU_CONFIG_PATH=/tmp/smsdrc
+## C. docker-compose.yml Notes
+Ensure your `docker-compose.yml` includes:
+```yaml
+devices:
+  - /dev/ttyUSB0:/dev/ttyUSB0
+privileged: true
+group_add:
+  - dialout
 ```
+These settings give the container access to the modem.
 
-## Environment variables
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `MODEM_DEVICE` | Optional fixed modem device | `/dev/ttyUSB0` |
-| `DEVICE` | *(legacy)* Path to the modem device | `/dev/ttyUSB0` |
-| `BAUDRATE` | *(legacy)* Serial baud rate | `115200` |
-| `TELEGRAM_BOT_TOKEN` | Telegram bot token used for sending messages | `123:ABC` |
-| `TELEGRAM_CHAT_ID` | Telegram chat ID that will receive messages | `123456` |
-| `LOGLEVEL` | Optional gammu debug level (1..3) | `1` |
-| `GAMMU_SPOOL_PATH` | Path used for gammu spool directories | `/var/spool/gammu` |
-| `GAMMU_CONFIG_PATH` | Path to generated smsdrc file | `/etc/gammu-smsdrc` |
+## D. Environment Variables
+| Variable | Required | Description |
+|---------|:-------:|-------------|
+| MODEM_PORT | ✅ | e.g., `/dev/ttyUSB0`; device path of your modem |
+| TELEGRAM_BOT_TOKEN | ✅ | Bot token used to forward messages |
+| TELEGRAM_CHAT_ID | ✅ | Chat ID to receive forwarded messages |
+| LOGLEVEL | ❌ | Logging level: INFO, DEBUG, WARNING, etc. |
+| GAMMU_SPOOL_PATH | ❌ | Path for Gammu spool directories |
 
-Copy `.env.example` to `.env` and fill in these values before starting the container.
-
-## Usage
-### Build locally
+## E. Container Debugging & Manual Testing
 ```bash
-git clone https://github.com/owner/sms-gateway.git
-cd sms-gateway
-cp .env.example .env
-docker compose up -d
+# View logs
+docker logs -f smsgateway
+
+# Enter container
+docker exec -it smsgateway /bin/sh
+
+# Inspect modem devices
+ls -l /dev/ttyUSB*
+
+# Test manually
+cat > /tmp/rc <<EOF_RC
+[gammu]
+device = /dev/ttyUSB0
+connection = at
+EOF_RC
+
+gammu -c /tmp/rc identify
+gammu -c /tmp/rc getallsms
 ```
 
-## Fire-and-Forget Deployment
-After starting, the container automatically searches for a Huawei modem and keeps
-`gammu-smsd` running even if the USB port changes.
+## F. Troubleshooting
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| No responsive modem | Invalid MODEM_PORT or modem not connected | Check `ls /dev/ttyUSB*` and update `.env` |
+| you don't have the required permission | Missing `privileged: true` or `group_add` | Add both to `docker-compose.yml` |
+| Unknown level: 'l' | Invalid LOGLEVEL value | Use `LOGLEVEL=INFO` or `DEBUG` |
+| gammu-smsd exits or container restarts endlessly | Config or modem issue | Check logs and test with manual `gammu identify` |
+| SMS received but not parsed | on_receive.py failure or incorrect spool path | Check logs and ensure `GAMMU_SPOOL_PATH` is correct |
 
+## G. Confirming SMS Reception
+Check logs for messages:
+```
+gammu-smsd: Received ...
+```
+Or run inside the container:
 ```bash
-docker compose up -d
-docker compose logs -f smsgateway
-# look for “✅  Using modem …”
+gammu -c /tmp/gammu-smsdrc getallsms
 ```
-
-Run the container as root or add your user to `dialout` once:
-```bash
-sudo usermod -aG dialout $USER
-```
-
-You can optionally pin the modem with `MODEM_DEVICE=/dev/ttyUSB0`.
-Stable names under `/dev/serial/by-id/` work out of the box, but you can also
-create a custom udev rule if needed.
-
-The container runs as root because USB devices usually require privileged access.
-
-### Volumes
-- `./state` → `/var/spool/gammu` – incoming/outgoing SMS and log files
-- `./smsdrc` → `/etc/gammu-smsdrc` – override gammu configuration
-
-## Running Tests Locally
-Install dependencies and run the test suite (no root needed):
-```sh
-pip install -r requirements.txt -r requirements-dev.txt
-GAMMU_SPOOL_PATH=/tmp/gammu-test \
-GAMMU_CONFIG_PATH=/tmp/gammu-smsdrc \
-pytest -q
-```
-
-The CI pipeline runs these tests both on the host and again inside the built
-Docker image. The image is only pushed if all tests succeed, ensuring you can
-`docker pull` with confidence.
-
-## CI / Tag release
-The Docker image is published to GitHub Container Registry whenever a git tag is pushed.
-
-**Secrets required**: none beyond the default `GITHUB_TOKEN`.
-
-Release with:
-
-```bash
-git tag -a vX.Y.Z -m "release vX.Y.Z"
-git push origin vX.Y.Z            # triggers the package workflow
-```
-
-Set `CI_MODE=true` in CI pipelines to disable the modem detection loop. When no
-command is supplied the image exits immediately with status `0`. Passing a
-command after the image name bypasses the loop during normal runs.
-
-Example CI smoke test:
-
-```sh
-docker run --rm -e CI_MODE=true ghcr.io/owner/sms-gateway:sha /bin/true
-```
-
-## Troubleshooting
-1. **Ports are visible on host?** `ls -l /dev/ttyUSB*`
-2. **Port free?** `sudo fuser -v /dev/ttyUSB0`
-3. **Modem responds?** `docker exec -it sms-gateway gammu -c /etc/gammu-smsdrc --identify`
-4. **Service initialized?** `docker logs -f sms-gateway | tail`
-5. **Message delivered to Telegram?** Check container logs for errors.
