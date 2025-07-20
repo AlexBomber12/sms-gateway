@@ -5,45 +5,66 @@ log() {
   echo "[entrypoint] $*"
 }
 
+: "${PROBE_TIMEOUT:=90}"   # seconds to keep looking before giving up
+: "${SCAN_SLEEP:=1}"       # delay between scan rounds
+
 generate_config() {
   local dev="$1"
-  cat > /tmp/gammu-smsdrc <<EOF
+  cat > /tmp/gammu-smsdrc <<EOF_CONF
 [gammu]
 device = ${dev}
 connection = at
 
 [smsd]
 service = files
-EOF
+EOF_CONF
   ln -sf /tmp/gammu-smsdrc /tmp/gammurc
 }
 
+auto_detect_port() {
+    local dev
+    dev=$(gammu --identify 2>/dev/null | awk -F': ' '$1=="Device"{print $2}')
+    [[ -n "$dev" && -e "$dev" ]] || return 1   # fail if nothing found
+    log "🛰  Gammu autodetected ${dev}"
+    MODEM_PORT="$dev"
+    export MODEM_PORT
+    return 0
+}
+
 probe_modem() {
-  timeout 12 gammu --identify -c /tmp/gammu-smsdrc >/dev/null 2>&1
+    local port="$1"
+    timeout 20 gammu --device "$port" --connection at --identify \
+        >/dev/null 2>&1
 }
 
 detect_modem() {
-  local start=$SECONDS
-  local deadline=$((start + 30))
-  local candidates=( )
-  [[ -n "${MODEM_PORT:-}" ]] && candidates+=("${MODEM_PORT}")
-  candidates+=(/dev/serial/by-id/* /dev/ttyUSB*)
-
-  while (( SECONDS < deadline )); do
-    for dev in "${candidates[@]}"; do
-      [[ -e "$dev" ]] || continue
-      generate_config "$dev"
-      if probe_modem; then
-        DEV="$dev"
-        export DEV
-        log "✅ Using ${DEV}"
+    # 0) Honour explicit env
+    if [[ -n "${MODEM_PORT:-}" && -e "${MODEM_PORT}" ]]; then
+        log "✅ Using pre-set ${MODEM_PORT}"
+        generate_config "${MODEM_PORT}"
         return 0
-      fi
+    fi
+
+    # 1) One-off Gammu auto-scan
+    auto_detect_port && { generate_config "${MODEM_PORT}"; return 0; }
+
+    # 2) Manual round-robin until deadline
+    local deadline=$((SECONDS + PROBE_TIMEOUT))
+    local ports
+    while (( SECONDS < deadline )); do
+        ports=( /dev/serial/by-id/* /dev/ttyUSB* /dev/ttyACM* )
+        for p in "${ports[@]}"; do
+            [[ -e "$p" ]] || continue
+            probe_modem "$p" && {
+                log "✅ Using $p"
+                generate_config "$p"
+                return 0
+            }
+        done
+        sleep "${SCAN_SLEEP}"
     done
-    sleep 1
-  done
-  log "Modem not found"
-  return 70
+    log "⛔  No responsive modem found after ${PROBE_TIMEOUT}s"
+    return 70
 }
 
 main() {
