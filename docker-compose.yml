@@ -5,14 +5,14 @@ services:
     group_add: [dialout]
     privileged: true
     devices:
-      - /dev/serial/by-id/:/dev/serial/by-id/
       - /dev/ttyUSB0:/dev/ttyUSB0
     env_file:
       - .env
+    environment:
+      MODEM_PORT: /dev/ttyUSB0
     restart: unless-stopped
     volumes:
       - ./state:/var/spool/gammu
-      - ./smsdrc:/etc/gammu-smsdrc:ro
     entrypoint: ./entrypoint.sh
     healthcheck:
       test: ["CMD-SHELL", "gammu --identify -c /tmp/gammu-smsdrc >/dev/null 2>&1"]
