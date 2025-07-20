@@ -82,13 +82,15 @@ detect_modem() {
 }
 
 main() {
-  LOGLEVEL="${LOGLEVEL:-1}"
   GAMMU_SPOOL_PATH="${GAMMU_SPOOL_PATH:-/var/spool/gammu}"
   mkdir -p "$GAMMU_SPOOL_PATH"/{inbox,outbox,sent,error,archive}
 
   detect_modem || exit 70
 
-  exec gammu-smsd -c /tmp/gammu-smsdrc -f
+  args=( -c /tmp/gammu-smsdrc )
+  [[ -n "${LOGLEVEL:-}"        ]] && args+=( -d "$LOGLEVEL" )
+  [[ "${FOREGROUND:-false}" == "true" ]] && args+=( -f )
+  exec gammu-smsd "${args[@]}"
 }
 
 # ---- Immediate bypasses -------------------------------------------------
