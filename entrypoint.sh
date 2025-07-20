@@ -88,8 +88,14 @@ main() {
   detect_modem || exit 70
 
   args=( -c /tmp/gammu-smsdrc )
-  [[ -n "${LOGLEVEL:-}"        ]] && args+=( -d "$LOGLEVEL" )
-  [[ "${FOREGROUND:-false}" == "true" ]] && args+=( -f )
+
+  if [[ -n "${LOGLEVEL:-}" ]]; then
+    grep -q '^\[smsd\]' /tmp/gammu-smsdrc || echo '[smsd]' >> /tmp/gammu-smsdrc
+    sed -i '/^\[smsd\]/,/^\[/ { /^DebugLevel[[:space:]]*=.*/d }' /tmp/gammu-smsdrc
+    sed -i '/^\[smsd\]/a DebugLevel = '"$LOGLEVEL"'' /tmp/gammu-smsdrc
+  fi
+
+  [[ "${FOREGROUND:-false}" != "true" ]] && args+=( --daemon )
   exec gammu-smsd "${args[@]}"
 }
 
