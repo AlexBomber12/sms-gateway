@@ -6,11 +6,14 @@ services:
     privileged: true
     devices:
       - /dev/serial/by-id/:/dev/serial/by-id/
+      - /dev/ttyUSB0:/dev/ttyUSB0
     env_file:
       - .env
     restart: unless-stopped
     volumes:
       - ./state:/var/spool/gammu
+      - ./smsdrc:/etc/gammu-smsdrc:ro
+    entrypoint: ./entrypoint.sh
     healthcheck:
       test: ["CMD-SHELL", "gammu --identify -c /tmp/gammu-smsdrc >/dev/null 2>&1"]
       interval: 30s

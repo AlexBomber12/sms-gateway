@@ -16,9 +16,25 @@ device = ${dev}
 connection = at
 
 [smsd]
-service = files
+service      = files
+inboxpath    = ${GAMMU_SPOOL_PATH}/inbox/
+outboxpath   = ${GAMMU_SPOOL_PATH}/outbox/
+sentpath     = ${GAMMU_SPOOL_PATH}/sent/
+errorpath    = ${GAMMU_SPOOL_PATH}/error/
+RunOnReceive = python3 /app/on_receive.py
+logfile      = /dev/stdout
 EOF_CONF
   ln -sf /tmp/gammu-smsdrc /tmp/gammurc
+}
+
+use_mounted_config() {
+  if [[ -f /etc/gammu-smsdrc ]]; then
+    log "Using smsdrc from volume"
+    cp /etc/gammu-smsdrc /tmp/gammu-smsdrc
+    ln -sf /tmp/gammu-smsdrc /tmp/gammurc
+    return 0
+  fi
+  return 1
 }
 
 make_temp_rc() {
@@ -85,8 +101,11 @@ main() {
   GAMMU_SPOOL_PATH="${GAMMU_SPOOL_PATH:-/var/spool/gammu}"
   mkdir -p "$GAMMU_SPOOL_PATH"/{inbox,outbox,sent,error,archive}
 
-  detect_modem || exit 70
+  if ! use_mounted_config; then
+    detect_modem || exit 70
+  fi
 
+  export GAMMU_CONFIG=/tmp/gammu-smsdrc
   args=( -c /tmp/gammu-smsdrc )
 
   if [[ -n "${LOGLEVEL:-}" ]]; then
