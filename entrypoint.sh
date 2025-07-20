@@ -28,6 +28,10 @@ EOF_CONF
 }
 
 use_mounted_config() {
+  if [[ -n "${MODEM_PORT:-}" ]]; then
+    # Skip mounted config when a modem port is pre-defined
+    return 1
+  fi
   if [[ -f /etc/gammu-smsdrc ]]; then
     log "Using smsdrc from volume"
     cp /etc/gammu-smsdrc /tmp/gammu-smsdrc
