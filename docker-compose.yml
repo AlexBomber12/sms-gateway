@@ -2,7 +2,6 @@ services:
   smsgateway:
     container_name: smsgateway
     image: ghcr.io/alexbomber12/sms-gateway:${SMSGW_VERSION}
-    build: .
     group_add: [dialout]
     privileged: true
     devices:
