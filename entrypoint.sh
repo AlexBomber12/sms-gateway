@@ -103,6 +103,13 @@ detect_modem() {
     return 70
 }
 
+reprobe_modem() {
+    detect_modem && {
+        local new_dev="$MODEM_PORT"
+        log "[watchdog] Switched to ${new_dev}"
+    }
+}
+
 main() {
   GAMMU_SPOOL_PATH="${GAMMU_SPOOL_PATH:-/var/spool/gammu}"
   mkdir -p "$GAMMU_SPOOL_PATH"/{inbox,outbox,sent,error,archive}
@@ -119,7 +126,17 @@ main() {
     sed -i '/^\[smsd\]/a DebugLevel = '"$LOGLEVEL"'' /tmp/gammu-smsdrc
   fi
 
-  exec gammu-smsd -c /tmp/gammu-smsdrc
+  failures=0
+  while true; do
+    gammu-smsd -c /tmp/gammu-smsdrc
+    ((failures++))
+    if [ $failures -ge 3 ]; then
+      log "[watchdog] too many failures, reprobing modem"
+      reprobe_modem
+      failures=0
+    fi
+    sleep 5
+  done
 }
 
 # ---- Immediate bypasses -------------------------------------------------
