@@ -74,31 +74,28 @@ probe_modem() {
 }
 
 detect_modem() {
-    # 0) honour explicit env
+    # Honour explicit env if it points to an existing device
     if [[ -n "${MODEM_PORT:-}" && -e "${MODEM_PORT}" ]]; then
         log "✅ Using pre-set ${MODEM_PORT}"
         generate_config "${MODEM_PORT}"
         return 0
     fi
 
-    # 1) one-off auto scan
-    auto_detect_port && { generate_config "${MODEM_PORT}"; return 0; }
-
-    # 2) manual round-robin
     local deadline=$((SECONDS + PROBE_TIMEOUT))
-    local ports
     while (( SECONDS < deadline )); do
-        ports=( /dev/serial/by-id/* /dev/ttyUSB* /dev/ttyACM* )
-        for p in "${ports[@]}"; do
+        for p in /dev/ttyUSB* /dev/serial/by-id/*; do
             [[ -e "$p" ]] || continue
-            probe_modem "$p" && {
+            if gammu identify -d 0 -c <(printf '[gammu]\ndevice=%s\nconnection=at\n' "$p") >/dev/null 2>&1; then
                 log "✅ Using $p"
+                MODEM_PORT="$p"
+                export MODEM_PORT
                 generate_config "$p"
                 return 0
-            }
+            fi
         done
         sleep "${SCAN_SLEEP}"
     done
+
     log "⛔  No responsive modem after ${PROBE_TIMEOUT}s"
     return 70
 }
@@ -126,14 +123,19 @@ main() {
     sed -i '/^\[smsd\]/a DebugLevel = '"$LOGLEVEL"'' /tmp/gammu-smsdrc
   fi
 
-  failures=0
+  fail=0
   while true; do
     gammu-smsd -c /tmp/gammu-smsdrc
-    ((failures++))
-    if [ $failures -ge 3 ]; then
-      log "[watchdog] too many failures, reprobing modem"
-      reprobe_modem
-      failures=0
+    rc=$?
+    if [ $rc -ne 0 ]; then
+      ((fail++))
+      if [ $fail -ge 3 ]; then
+        log "[watchdog] too many failures ($fail). Re-probing modem"
+        detect_modem
+        fail=0
+      fi
+    else
+      fail=0
     fi
     sleep 5
   done
