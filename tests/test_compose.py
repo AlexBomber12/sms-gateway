@@ -39,6 +39,7 @@ def test_compose_service_healthy():
     if not env.exists():
         env.write_text("SMSGW_VERSION=test\n")
     subprocess.run(["docker", "compose", "up", "-d"], check=True)
+    container_id = subprocess.check_output(["docker", "compose", "ps", "-q", "smsgateway"]).decode().strip()
     try:
         deadline = time.time() + 60
         status = ""
@@ -49,7 +50,7 @@ def test_compose_service_healthy():
                     "inspect",
                     "--format",
                     "{{.State.Health.Status}}",
-                    "smsgateway",
+                    container_id,
                 ],
                 capture_output=True,
                 text=True,
@@ -63,7 +64,7 @@ def test_compose_service_healthy():
             [
                 "docker",
                 "exec",
-                "smsgateway",
+                container_id,
                 "gammu",
                 "--identify",
                 "-c",
