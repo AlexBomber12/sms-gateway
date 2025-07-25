@@ -74,30 +74,15 @@ probe_modem() {
 }
 
 detect_modem() {
-    # Honour explicit env if it points to an existing device
-    if [[ -n "${MODEM_PORT:-}" && -e "${MODEM_PORT}" ]]; then
-        log "✅ Using pre-set ${MODEM_PORT}"
-        generate_config "${MODEM_PORT}"
-        return 0
+  for p in /dev/ttyUSB* /dev/serial/by-id/*; do
+    [ -e "$p" ] || continue
+    if gammu identify -d 0 -c <(printf '[gammu]\ndevice=%s\nconnection=at\n' "$p") >/dev/null 2>&1; then
+      echo "[detect_modem] found working port $p"
+      generate_config "$p"
+      return 0
     fi
-
-    local deadline=$((SECONDS + PROBE_TIMEOUT))
-    while (( SECONDS < deadline )); do
-        for p in /dev/ttyUSB* /dev/serial/by-id/*; do
-            [[ -e "$p" ]] || continue
-            if gammu identify -d 0 -c <(printf '[gammu]\ndevice=%s\nconnection=at\n' "$p") >/dev/null 2>&1; then
-                log "✅ Using $p"
-                MODEM_PORT="$p"
-                export MODEM_PORT
-                generate_config "$p"
-                return 0
-            fi
-        done
-        sleep "${SCAN_SLEEP}"
-    done
-
-    log "⛔  No responsive modem after ${PROBE_TIMEOUT}s"
-    return 70
+  done
+  return 70
 }
 
 reprobe_modem() {
@@ -129,10 +114,15 @@ main() {
     rc=$?
     if [ $rc -ne 0 ]; then
       ((fail++))
+      echo "[watchdog] gammu-smsd exited rc=$rc (fail=$fail)"
       if [ $fail -ge 3 ]; then
-        log "[watchdog] too many failures ($fail). Re-probing modem"
-        detect_modem
-        fail=0
+        echo "[watchdog] re-probing modem"
+        if detect_modem; then
+          fail=0
+        else
+          echo "[watchdog] modem still missing, exiting for Docker restart"
+          exit 74
+        fi
       fi
     else
       fail=0

@@ -1,22 +1,17 @@
 services:
   smsgateway:
-    container_name: smsgateway
     image: ghcr.io/alexbomber12/sms-gateway:${SMSGW_VERSION}
-    group_add:
-      - dialout
     privileged: true
+    group_add: [dialout]
     devices:
-      - /dev/ttyUSB0:/dev/ttyUSB0
-    env_file:
-      - .env
-    environment:
-      MODEM_PORT: /dev/ttyUSB0
+      - /dev/ttyUSB0:/dev/ttyUSB0        # only initial mapping; others appear automatically
+    env_file: [.env]
     volumes:
       - ./state:/var/spool/gammu
     entrypoint: ./entrypoint.sh
     healthcheck:
       test: ["CMD-SHELL", "gammu identify -c /tmp/gammu-smsdrc >/dev/null 2>&1"]
-      interval: 1m
+      interval: 60s
       timeout: 10s
       retries: 3
       start_period: 20s
