@@ -23,4 +23,8 @@ RUN pip install --no-cache-dir -e .
 RUN chmod +x /app/start.sh
 COPY entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY smsgw-watchdog.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/smsgw-watchdog.sh
+COPY smsgw-watchdog.cron /etc/cron.d/
+RUN chmod 644 /etc/cron.d/smsgw-watchdog.cron && crontab /etc/cron.d/smsgw-watchdog.cron
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

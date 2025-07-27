@@ -1,1 +1,1 @@
-*/5 * * * * /usr/local/bin/smsgw-watchdog.sh
+*/5 * * * * root /usr/local/bin/smsgw-watchdog.sh >> /var/log/smsgw-watchdog.log 2>&1
