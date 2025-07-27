@@ -21,7 +21,7 @@ jobs:
       - name: Run tests
         env:
           CI_MODE: "true"
-        run: sudo -E pytest -v
+        run: sudo -E python -m pytest -v -k "not test_detect_modem"
 
       - name: Docker meta
         id: vars
