@@ -21,8 +21,7 @@ jobs:
       - name: Run tests
         env:
           CI_MODE: "true"
-        run: pytest -v
-
+        run: sudo -E pytest -v
 
       - name: Docker meta
         id: vars
