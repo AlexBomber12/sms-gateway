@@ -5,6 +5,7 @@ services:
     group_add: [dialout]
     devices:
       - /dev/ttyUSB0:/dev/ttyUSB0        # only initial mapping; others appear automatically
+      - /dev/usb:/dev/usb               # pass whole usb bus for reset
     env_file: [.env]
     volumes:
       - ./state:/var/spool/gammu
