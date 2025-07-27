@@ -98,8 +98,21 @@ main() {
 
   service cron start >/dev/null
 
+  echo "[entrypoint] 🕒 waiting 15s for modem enumeration…"
+  sleep 15
+
   if ! use_mounted_config; then
-    detect_modem || exit 70
+    tries=0
+    max_tries=3
+    until detect_modem; do
+      ((tries++))
+      if [ $tries -ge $max_tries ]; then
+        echo "[entrypoint] ❌ modem not found after $tries attempts, exit 70"
+        exit 70
+      fi
+      echo "[entrypoint] retry $tries/$max_tries – modem still quiet, wait 5s"
+      sleep 5
+    done
   fi
 
   export GAMMU_CONFIG=/tmp/gammu-smsdrc
