@@ -106,12 +106,13 @@ main() {
     max_tries=3
     until detect_modem; do
       ((tries++))
-      if [ $tries -ge $max_tries ]; then
-        echo "[entrypoint] ❌ modem not found after $tries attempts, exit 70"
-        exit 70
+      if [ $tries -lt $max_tries ]; then
+        echo "[retry] $tries/$max_tries"
+        sleep 5
+        continue
       fi
-      echo "[entrypoint] retry $tries/$max_tries – modem still quiet, wait 5s"
-      sleep 5
+      echo "[entrypoint] ❌ modem not found – exit 70"
+      exit 70
     done
   fi
 
@@ -129,6 +130,7 @@ main() {
     echo "[watchdog] starting sms-daemon"
     gammu-smsd -c /tmp/gammu-smsdrc
     rc=$?
+    pkill -9 -x gammu-smsd 2>/dev/null || true
     if [ $rc -ne 0 ]; then
       ((fail++))
       echo "[watchdog] gammu-smsd exited rc=$rc (fail=$fail)"
@@ -145,7 +147,7 @@ main() {
       # keep fail count until modem re-probe succeeds
       :
     fi
-    sleep 5
+    sleep 2
   done
 }
 

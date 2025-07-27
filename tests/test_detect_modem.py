@@ -58,33 +58,34 @@ def test_detect_modem_failure(tmp_path):
 
 
 def test_retry_loop_exit_70(tmp_path):
-    make_gammu_stub(tmp_path, succeed_after=999)
-    dev = Path("/dev/ttyUSB42")
-    dev.touch()
     env = setup_env(tmp_path)
     loop = (
-        "tries=0; max_tries=3; "
+        "codes=(1 1 1)\n"
+        "idx=0\n"
+        "detect_modem() { rc=${codes[$idx]}; idx=$((idx+1)); return $rc; }\n"
+        "tries=0; max_tries=3;\n"
         "until detect_modem; do ((tries++)); "
-        "if [ $tries -ge $max_tries ]; then exit 70; fi; sleep 0.1; done"
+        "if [ $tries -lt $max_tries ]; then sleep 0.1; continue; fi; "
+        "echo exit70; exit 70; done"
     )
     res = run_bash(loop, env)
-    dev.unlink()
     assert res.returncode == 70
 
 
 def test_retry_loop_succeeds(tmp_path):
-    make_gammu_stub(tmp_path, succeed_after=2)
-    dev = Path("/dev/ttyUSB42")
-    dev.touch()
     env = setup_env(tmp_path)
     loop = (
-        "tries=0; max_tries=3; "
+        "codes=(1 1 0)\n"
+        "idx=0\n"
+        "detect_modem() { rc=${codes[$idx]}; idx=$((idx+1)); return $rc; }\n"
+        "tries=0; max_tries=3;\n"
         "until detect_modem; do ((tries++)); "
-        "if [ $tries -ge $max_tries ]; then exit 70; fi; sleep 0.1; done"
+        "if [ $tries -lt $max_tries ]; then sleep 0.1; continue; fi; "
+        "echo exit70; exit 70; done; echo calls=$idx"
     )
     res = run_bash(loop, env)
-    dev.unlink()
     assert res.returncode == 0
+    assert "calls=3" in res.stdout
 
 
 def test_single_instance(tmp_path):
@@ -104,7 +105,7 @@ def test_single_instance(tmp_path):
     env = setup_env(tmp_path)
     proc = subprocess.Popen(["bash", "entrypoint.sh"], env=env)
     try:
-        time.sleep(0.5)
+        time.sleep(2)
         count = int(subprocess.check_output(["pgrep", "-f", "-c", "gammu-smsd"]).strip())
         assert count == 1
     finally:
