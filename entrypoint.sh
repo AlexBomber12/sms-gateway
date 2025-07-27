@@ -76,13 +76,13 @@ probe_modem() {
 detect_modem() {
   for p in /dev/ttyUSB* /dev/serial/by-id/*; do
     [ -e "$p" ] || continue
-    if gammu identify -d 0 -c <(printf '[gammu]\ndevice=%s\nconnection=at\n' "$p") >/dev/null 2>&1; then
+    if timeout 8 gammu identify -d 0 -c <(printf '[gammu]\ndevice=%s\nconnection=at\n' "$p") >/dev/null 2>&1; then
       echo "[detect_modem] found working port $p"
       generate_config "$p"
       return 0
     fi
   done
-  return 70
+  return 1
 }
 
 reprobe_modem() {
@@ -124,7 +124,9 @@ main() {
   fi
 
   fail=0
+  pkill -9 -x gammu-smsd 2>/dev/null || true
   while true; do
+    echo "[watchdog] starting sms-daemon"
     gammu-smsd -c /tmp/gammu-smsdrc
     rc=$?
     if [ $rc -ne 0 ]; then
