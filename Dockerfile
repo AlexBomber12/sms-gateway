@@ -4,7 +4,7 @@ ARG INSTALL_DEV_DEPS="false"
 
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        cron usb-modeswitch usbutils gammu gammu-smsd procps \
+        cron usb-modeswitch usbutils gammu gammu-smsd procps tini \
  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN usermod -a -G dialout root
@@ -27,4 +27,4 @@ COPY smsgw-watchdog.sh /usr/local/bin/
 RUN chmod 755 /usr/local/bin/smsgw-watchdog.sh
 COPY smsgw-watchdog.cron /etc/cron.d/
 RUN chmod 644 /etc/cron.d/smsgw-watchdog.cron && crontab /etc/cron.d/smsgw-watchdog.cron
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+ENTRYPOINT ["/usr/bin/tini","--","./entrypoint.sh"]

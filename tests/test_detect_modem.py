@@ -1,5 +1,6 @@
 import os
 import subprocess
+import time
 from pathlib import Path
 
 ENTRYPOINT = Path("entrypoint.sh").read_text().splitlines()
@@ -84,3 +85,29 @@ def test_retry_loop_succeeds(tmp_path):
     res = run_bash(loop, env)
     dev.unlink()
     assert res.returncode == 0
+
+
+def test_single_instance(tmp_path):
+    make_gammu_stub(tmp_path)
+    subprocess.run(["pkill", "-9", "-f", "gammu-smsd"], stderr=subprocess.DEVNULL)
+    svc = Path(tmp_path) / "service"
+    svc.write_text("#!/usr/bin/env bash\nexit 0\n")
+    svc.chmod(0o755)
+    slp = Path(tmp_path) / "sleep"
+    slp.write_text("#!/usr/bin/env bash\n/bin/true\n")
+    slp.chmod(0o755)
+    smsd = Path(tmp_path) / "gammu-smsd"
+    smsd.write_text("#!/usr/bin/env bash\n/bin/sleep 60\n")
+    smsd.chmod(0o755)
+    dev = Path("/dev/ttyUSB42")
+    dev.touch()
+    env = setup_env(tmp_path)
+    proc = subprocess.Popen(["bash", "entrypoint.sh"], env=env)
+    try:
+        time.sleep(0.5)
+        count = int(subprocess.check_output(["pgrep", "-f", "-c", "gammu-smsd"]).strip())
+        assert count == 1
+    finally:
+        proc.terminate()
+        proc.wait(timeout=5)
+        dev.unlink()

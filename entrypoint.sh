@@ -124,7 +124,9 @@ main() {
   fi
 
   fail=0
+  pkill -9 -x gammu-smsd 2>/dev/null || true
   while true; do
+    echo "[watchdog] starting sms-daemon"
     gammu-smsd -c /tmp/gammu-smsdrc
     rc=$?
     if [ $rc -ne 0 ]; then
