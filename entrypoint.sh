@@ -96,6 +96,8 @@ main() {
   GAMMU_SPOOL_PATH="${GAMMU_SPOOL_PATH:-/var/spool/gammu}"
   mkdir -p "$GAMMU_SPOOL_PATH"/{inbox,outbox,sent,error,archive}
 
+  service cron start >/dev/null
+
   if ! use_mounted_config; then
     detect_modem || exit 70
   fi
@@ -125,7 +127,8 @@ main() {
         fi
       fi
     else
-      fail=0
+      # keep fail count until modem re-probe succeeds
+      :
     fi
     sleep 5
   done
