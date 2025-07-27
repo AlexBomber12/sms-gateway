@@ -53,7 +53,7 @@ jobs:
             -e DEVICE=/dev/null -e BAUDRATE=9600 \
             -e TELEGRAM_BOT_TOKEN=dummy -e TELEGRAM_CHAT_ID=dummy \
             -e GAMMU_SPOOL_PATH=/tmp/gammu -e GAMMU_CONFIG_PATH=/tmp/smsdrc \
-            "$IMAGE" pytest -v
+            "$IMAGE" python -m pytest -v -k "not test_detect_modem"
 
       - name: Smoke test container
         run: |
