@@ -1,11 +1,13 @@
 import subprocess
 import pathlib
+import time
 
-assert (
-    subprocess.run(
-        [pathlib.Path("entrypoint.sh").resolve()],
-        env={"CI_MODE": "true"},
-        timeout=3,
-    ).returncode
-    == 0
+proc = subprocess.Popen(
+    [pathlib.Path("entrypoint.sh").resolve()], env={"CI_MODE": "true"}
 )
+try:
+    time.sleep(1)
+    assert proc.poll() is None
+finally:
+    proc.terminate()
+    proc.wait(timeout=3)
