@@ -109,17 +109,9 @@ main() {
   sleep 15
 
   if ! use_mounted_config; then
-    tries=0
-    max_tries=3
     until detect_modem; do
-      ((tries++))
-      if [ $tries -lt $max_tries ]; then
-        echo "[retry] $tries/$max_tries"
-        sleep 5
-        continue
-      fi
-      echo "[entrypoint] ❌ modem not found – exit 70"
-      exit 70
+      echo "[entrypoint] No modem found; will retry in 30s"
+      sleep 30
     done
   fi
 
@@ -146,8 +138,10 @@ main() {
         if detect_modem; then
           fail=0
         else
-          echo "[watchdog] modem still missing, exiting for Docker restart"
-          exit 74
+          echo "[watchdog] modem still missing; will retry in 30s"
+          fail=0
+          sleep 30
+          continue
         fi
       fi
     else
@@ -162,8 +156,11 @@ main() {
 # Skip the modem scan entirely during CI or when explicitly requested.
 if [[ "${CI_MODE:-}" == "true" || "${SKIP_MODEM:-}" == "true" ]]; then
   log "Modem scan disabled."
-  [[ $# -gt 0 ]] && exec "$@"
-  exit 0
+  if [[ $# -gt 0 ]]; then
+    exec "$@"
+  else
+    exec tail -f /dev/null
+  fi
 fi
 
 main "$@"

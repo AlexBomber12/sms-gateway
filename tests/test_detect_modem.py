@@ -57,19 +57,17 @@ def test_detect_modem_failure(tmp_path):
     assert res.returncode == 1
 
 
-def test_retry_loop_exit_70(tmp_path):
+def test_retry_loop_retries(tmp_path):
     env = setup_env(tmp_path)
     loop = (
-        "codes=(1 1 1)\n"
-        "idx=0\n"
-        "detect_modem() { rc=${codes[$idx]}; idx=$((idx+1)); return $rc; }\n"
-        "tries=0; max_tries=3;\n"
-        "until detect_modem; do ((tries++)); "
-        "if [ $tries -lt $max_tries ]; then sleep 0.1; continue; fi; "
-        "echo exit70; exit 70; done"
+        "detect_modem() { return 1; }\n"
+        "sleep() { count=$((count+1)); [ $count -ge 3 ] && exit 0; }\n"
+        "count=0\n"
+        "until detect_modem; do echo retry$count; sleep 30; done"
     )
     res = run_bash(loop, env)
-    assert res.returncode == 70
+    assert res.returncode == 0
+    assert res.stdout.count('retry') == 3
 
 
 def test_retry_loop_succeeds(tmp_path):
@@ -78,10 +76,8 @@ def test_retry_loop_succeeds(tmp_path):
         "codes=(1 1 0)\n"
         "idx=0\n"
         "detect_modem() { rc=${codes[$idx]}; idx=$((idx+1)); return $rc; }\n"
-        "tries=0; max_tries=3;\n"
-        "until detect_modem; do ((tries++)); "
-        "if [ $tries -lt $max_tries ]; then sleep 0.1; continue; fi; "
-        "echo exit70; exit 70; done; echo calls=$idx"
+        "sleep() { :; }\n"
+        "until detect_modem; do sleep 30; done; echo calls=$idx"
     )
     res = run_bash(loop, env)
     assert res.returncode == 0
