@@ -63,11 +63,11 @@ def test_retry_loop_retries(tmp_path):
         "detect_modem() { return 1; }\n"
         "sleep() { count=$((count+1)); [ $count -ge 3 ] && exit 0; }\n"
         "count=0\n"
-        "until detect_modem; do echo retry$count; sleep 30; done"
+        "until detect_modem; do reset_modem; echo retry$count; sleep 30; done"
     )
     res = run_bash(loop, env)
     assert res.returncode == 0
-    assert res.stdout.count('retry') == 3
+    assert res.stdout.count("retry") == 3
 
 
 def test_retry_loop_succeeds(tmp_path):
@@ -77,7 +77,7 @@ def test_retry_loop_succeeds(tmp_path):
         "idx=0\n"
         "detect_modem() { rc=${codes[$idx]}; idx=$((idx+1)); return $rc; }\n"
         "sleep() { :; }\n"
-        "until detect_modem; do sleep 30; done; echo calls=$idx"
+        "until detect_modem; do reset_modem; sleep 30; done; echo calls=$idx"
     )
     res = run_bash(loop, env)
     assert res.returncode == 0

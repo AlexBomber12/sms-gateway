@@ -7,6 +7,8 @@ log() {
 
 : "${PROBE_TIMEOUT:=90}"   # seconds before giving up
 : "${SCAN_SLEEP:=1}"       # pause between scan rounds
+: "${USB_VID:=}"
+: "${USB_PID:=}"
 
 # Skip modem scan when running tests under pytest.
 if [[ "${1:-}" == "pytest" ]] ||
@@ -92,6 +94,15 @@ detect_modem() {
   return 1
 }
 
+reset_modem() {
+  if [[ -n "${USB_VID}" && -n "${USB_PID}" ]]; then
+    log "Resetting modem via usb_modeswitch"
+    usb_modeswitch -R -v "$USB_VID" -p "$USB_PID" || true
+  else
+    log "USB_VID or USB_PID unset; skipping modem reset"
+  fi
+}
+
 reprobe_modem() {
     detect_modem && {
         local new_dev="$MODEM_PORT"
@@ -111,6 +122,7 @@ main() {
   if ! use_mounted_config; then
     until detect_modem; do
       echo "[entrypoint] No modem found; will retry in 30s"
+      reset_modem
       sleep 30
     done
   fi
@@ -139,6 +151,7 @@ main() {
           fail=0
         else
           echo "[watchdog] modem still missing; will retry in 30s"
+          reset_modem
           fail=0
           sleep 30
           continue

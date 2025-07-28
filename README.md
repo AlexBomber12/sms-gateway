@@ -43,6 +43,8 @@ These settings give the container access to the modem.
 | TELEGRAM_CHAT_ID | ✅ | Chat ID to receive forwarded messages |
 | LOGLEVEL | ❌ | Logging level: INFO, DEBUG, WARNING, etc. |
 | GAMMU_SPOOL_PATH | ❌ | Path for Gammu spool directories |
+| USB_VID | ❌ | USB vendor ID for modem resets |
+| USB_PID | ❌ | USB product ID for modem resets |
 
 ## E. Container Debugging & Manual Testing
 ```bash
