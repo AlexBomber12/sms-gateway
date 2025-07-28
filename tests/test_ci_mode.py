@@ -2,9 +2,7 @@ import subprocess
 import pathlib
 import time
 
-proc = subprocess.Popen(
-    [pathlib.Path("entrypoint.sh").resolve()], env={"CI_MODE": "true"}
-)
+proc = subprocess.Popen([pathlib.Path("entrypoint.sh").resolve()], env={"CI_MODE": "true"})
 try:
     time.sleep(1)
     assert proc.poll() is None
