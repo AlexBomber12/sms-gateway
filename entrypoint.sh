@@ -8,6 +8,13 @@ log() {
 : "${PROBE_TIMEOUT:=90}"   # seconds before giving up
 : "${SCAN_SLEEP:=1}"       # pause between scan rounds
 
+# Skip modem scan when running tests under pytest.
+if [[ "${1:-}" == "pytest" ]] ||
+   { [[ "${1:-}" =~ ^python(3)?$ ]] && [[ "${2:-}" == "-m" ]] && [[ "${3:-}" == "pytest" ]]; }; then
+  log "Running pytest; skipping modem scan."
+  exec "$@"
+fi
+
 generate_config() {
   local dev="$1"
   cat > /tmp/gammu-smsdrc <<EOF_CONF
