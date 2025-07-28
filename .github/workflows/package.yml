@@ -56,15 +56,23 @@ jobs:
 
       - name: unit tests
         if: always()
+        env:
+          CI_MODE: "true"
+          DEVICE: /dev/null
+          BAUDRATE: "9600"
+          TELEGRAM_BOT_TOKEN: dummy
+          TELEGRAM_CHAT_ID: dummy
+          GAMMU_SPOOL_PATH: /tmp/gammu
+          GAMMU_CONFIG_PATH: /tmp/smsdrc
         run: |
           docker run --rm \
-            -e CI_MODE=true \
-            -e DEVICE=/dev/null \
-            -e BAUDRATE=9600 \
-            -e TELEGRAM_BOT_TOKEN=dummy \
-            -e TELEGRAM_CHAT_ID=dummy \
-            -e GAMMU_SPOOL_PATH=/tmp/gammu \
-            -e GAMMU_CONFIG_PATH=/tmp/smsdrc \
+            -e CI_MODE \
+            -e DEVICE \
+            -e BAUDRATE \
+            -e TELEGRAM_BOT_TOKEN \
+            -e TELEGRAM_CHAT_ID \
+            -e GAMMU_SPOOL_PATH \
+            -e GAMMU_CONFIG_PATH \
             ghcr.io/${{ steps.meta.outputs.repo }}:${{ github.sha }} \
             python -m pytest -q -k "not test_detect_modem"
 
