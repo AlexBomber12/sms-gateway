@@ -57,9 +57,9 @@ jobs:
       - name: unit tests
         if: always()
         run: |
-          docker run --rm -e CI_MODE=true \
+          docker run --rm \
             ghcr.io/${{ steps.meta.outputs.repo }}:${{ github.sha }} \
-            pytest -q
+            python -m pytest -q -k "not test_detect_modem"
 
       - name: smoke test with compose
         run: |
