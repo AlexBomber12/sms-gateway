@@ -58,6 +58,13 @@ jobs:
         if: always()
         run: |
           docker run --rm \
+            -e CI_MODE=true \
+            -e DEVICE=/dev/null \
+            -e BAUDRATE=9600 \
+            -e TELEGRAM_BOT_TOKEN=dummy \
+            -e TELEGRAM_CHAT_ID=dummy \
+            -e GAMMU_SPOOL_PATH=/tmp/gammu \
+            -e GAMMU_CONFIG_PATH=/tmp/smsdrc \
             ghcr.io/${{ steps.meta.outputs.repo }}:${{ github.sha }} \
             python -m pytest -q -k "not test_detect_modem"
 
