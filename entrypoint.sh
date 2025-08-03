@@ -123,6 +123,7 @@ watchdog_loop() {
         log "Waiting 20 seconds after USB reset"
         sleep 20
         pkill -9 -x gammu-smsd 2>/dev/null || true
+        # shellcheck disable=SC2093
         exec "$0" "$@"
     done
 }
