@@ -2,10 +2,16 @@ FROM python:3.12-slim
 
 ARG INSTALL_DEV_DEPS="false"
 
-RUN apt-get update \
- && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        cron usb-modeswitch usbutils gammu gammu-smsd procps tini \
- && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    cron \
+    usb-modeswitch \
+    usbutils \
+    gammu \
+    gammu-smsd \
+    socat \
+    procps \
+    tini \
+ && rm -rf /var/lib/apt/lists/*
 
 RUN usermod -a -G dialout root
 

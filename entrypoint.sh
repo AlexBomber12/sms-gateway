@@ -52,7 +52,7 @@ EOF
 }
 
 # Capture USB identifiers for the modem from sysfs if available.  These
-# values are later refined through lsusb inside reset_modem().
+# values are later refined through lsusb when performing USB resets.
 capture_usb_ids() {
     local dev="$1" base
     base="/sys/class/tty/${dev##*/}/device"
@@ -67,7 +67,7 @@ capture_usb_ids() {
 }
 
 # ---------------------------------------------------------------------------
-# Modem detection and reset routines
+# Modem detection helpers
 # ---------------------------------------------------------------------------
 detect_modem() {
     for p in /dev/ttyUSB* /dev/serial/by-id/*; do
@@ -106,41 +106,25 @@ determine_usb_ids() {
     return 0
 }
 
-reset_modem() {
-    log "[reset] attempting USB reset"
-    determine_usb_ids || { log "[reset] unable to determine USB IDs"; return 0; }
-    if command -v usb_modeswitch >/dev/null 2>&1; then
-        log "[reset] usb_modeswitch -R -v ${USB_VID} -p ${USB_PID}"
-        usb_modeswitch -R -v "$USB_VID" -p "$USB_PID" >/dev/null 2>&1 || \
-            log "[reset] usb_modeswitch failed"
-    else
-        log "[reset] usb_modeswitch not found; skipping reset"
-        return 0
-    fi
-    log "[reset] waiting 20s for modem to reinitialize"
-    sleep 20
-}
-
 # ---------------------------------------------------------------------------
-# Runtime loop
+# Watchdog loop
 # ---------------------------------------------------------------------------
-start_daemon_loop() {
-    while true; do
-        log "[watchdog] starting sms-daemon"
-        gammu-smsd -c /tmp/gammu-smsdrc
-        local rc=$?
-        pkill -9 -x gammu-smsd 2>/dev/null || true
-        log "[watchdog] gammu-smsd exited rc=$rc"
-        log "[watchdog] re-detecting modem"
-        if detect_modem; then
+watchdog_loop() {
+    local smsd_pid="$1"
+    shift
+    while kill -0 "$smsd_pid" >/dev/null 2>&1; do
+        if timeout 5 bash -c 'echo -e "AT\r" | socat - /dev/ttyUSB0,crnl | grep -q "OK"'; then
+            sleep 30
             continue
         fi
-        log "[watchdog] modem not detected; performing USB reset"
-        reset_modem
-        until detect_modem; do
-            log "[watchdog] modem still missing; retrying in 5s"
-            sleep 5
-        done
+        log "[watchdog] Modem not responding to AT command, performing USB reset"
+        determine_usb_ids || true
+        usb_modeswitch -R -v "$USB_VID" -p "$USB_PID" >/dev/null 2>&1 || true
+        log "Waiting 20 seconds after USB reset"
+        sleep 20
+        pkill -9 -x gammu-smsd 2>/dev/null || true
+        # shellcheck disable=SC2093
+        exec "$0" "$@"
     done
 }
 
@@ -155,7 +139,10 @@ main() {
     until detect_modem; do
         if (( SECONDS - start > 60 )); then
             log "Initial detection timeout; attempting USB reset"
-            reset_modem
+            determine_usb_ids || true
+            usb_modeswitch -R -v "$USB_VID" -p "$USB_PID" >/dev/null 2>&1 || true
+            log "Waiting 20 seconds after USB reset"
+            sleep 20
             start=$SECONDS
         fi
         log "Modem not detected yet; retrying in 5s"
@@ -168,7 +155,10 @@ main() {
         sed -i '/^\[smsd\]/a DebugLevel = '"$LOGLEVEL"'' /tmp/gammu-smsdrc
     fi
 
-    start_daemon_loop
+    log "Starting sms-daemon"
+    gammu-smsd -c /tmp/gammu-smsdrc &
+    local smsd_pid=$!
+    watchdog_loop "$smsd_pid" "$@"
 }
 
 main "$@"
