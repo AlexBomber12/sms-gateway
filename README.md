@@ -86,3 +86,21 @@ Or run inside the container:
 ```bash
 gammu -c /tmp/gammu-smsdrc getallsms
 ```
+
+## Dependencies
+
+The following dependencies are installed automatically via Dockerfile, no manual installation needed:
+
+- gammu
+- gammu-smsd
+- usb-modeswitch
+- socat
+
+## Troubleshooting
+
+To verify modem availability manually via AT command, run:
+
+```bash
+echo -e "AT\r" | sudo socat - /dev/ttyUSB0,crnl
+```
+Successful modem response is "OK".
