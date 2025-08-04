@@ -89,8 +89,7 @@ gammu -c /tmp/gammu-smsdrc getallsms
 
 ## Dependencies
 
-The following dependencies are installed automatically via Dockerfile, no manual installation needed:
-
+All required dependencies are installed automatically via Dockerfile:
 - gammu
 - gammu-smsd
 - usb-modeswitch
@@ -98,9 +97,9 @@ The following dependencies are installed automatically via Dockerfile, no manual
 
 ## Troubleshooting
 
-To verify modem availability manually via AT command, run:
+To manually verify modem availability via direct AT-command, use:
 
 ```bash
 echo -e "AT\r" | sudo socat - /dev/ttyUSB0,crnl
 ```
-Successful modem response is "OK".
+The correct response from the modem is "OK".

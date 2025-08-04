@@ -5,3 +5,5 @@ baudrate = 115200
 
 [smsd]
 service = files
+CheckSecurity = 0
+
