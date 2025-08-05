@@ -118,8 +118,24 @@ watchdog_loop() {
             continue
         fi
         log "[watchdog] Modem not responding to AT command, performing USB reset"
-        determine_usb_ids || true
+
+        USB_INFO=$(lsusb | grep -iE 'Huawei|modem|E352' | head -n1 || true)
+
+        if [[ -z "${USB_INFO:-}" ]]; then
+            log "[watchdog] lsusb did not detect any modem device, aborting reset"
+            return 1
+        fi
+
+        USB_VID=$(echo "$USB_INFO" | awk '{print $6}' | cut -d':' -f1)
+        USB_PID=$(echo "$USB_INFO" | awk '{print $6}' | cut -d':' -f2)
+
+        if [[ -z "${USB_VID:-}" || -z "${USB_PID:-}" ]]; then
+            log "[watchdog] Failed to detect USB VID/PID, aborting reset"
+            return 1
+        fi
+
         usb_modeswitch -R -v "$USB_VID" -p "$USB_PID" >/dev/null 2>&1 || true
+
         log "Waiting 20 seconds after USB reset"
         sleep 20
         pkill -9 -x gammu-smsd 2>/dev/null || true
