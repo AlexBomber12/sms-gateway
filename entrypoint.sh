@@ -75,21 +75,43 @@ check_modem() {
   timeout 5 bash -c 'echo -e "AT\r" | socat - /dev/ttyUSB0,crnl | grep -q "OK"' 2>/dev/null
 }
 
-reset_usb_modem() {
-  log "[watchdog] Modem not responding to AT command, performing USB reset"
-  
-  USB_INFO=$(lsusb | grep -iE 'Huawei|modem|E352' | head -n1)
-  USB_VID=$(echo "$USB_INFO" | awk '{print $6}' | cut -d':' -f1)
-  USB_PID=$(echo "$USB_INFO" | awk '{print $6}' | cut -d':' -f2)
+# ---------------------------------------------------------------------------
+# Watchdog loop
+# ---------------------------------------------------------------------------
+watchdog_loop() {
+    local smsd_pid="$1"
+    shift
+    while kill -0 "$smsd_pid" >/dev/null 2>&1; do
+        if timeout 5 bash -c 'echo -e "AT\r" | socat - /dev/ttyUSB0,crnl | grep -q "OK"'; then
+            sleep 30
+            continue
+        fi
+        log "[watchdog] Modem not responding to AT command, performing USB reset"
 
-  if [[ -z "${USB_VID:-}" || -z "${USB_PID:-}" ]]; then
-    log "[watchdog] Failed to detect USB VID/PID, aborting reset"
-    return 1
-  fi
+        USB_INFO=$(lsusb | grep -iE 'Huawei|modem|E352' | head -n1 || true)
 
-  usb_modeswitch -R -v "$USB_VID" -p "$USB_PID"
-  log "[watchdog] Waiting 20 seconds after USB reset"
-  sleep 20
+        if [[ -z "${USB_INFO:-}" ]]; then
+            log "[watchdog] lsusb did not detect any modem device, aborting reset"
+            return 1
+        fi
+
+        USB_VID=$(echo "$USB_INFO" | awk '{print $6}' | cut -d':' -f1)
+        USB_PID=$(echo "$USB_INFO" | awk '{print $6}' | cut -d':' -f2)
+
+        if [[ -z "${USB_VID:-}" || -z "${USB_PID:-}" ]]; then
+            log "[watchdog] Failed to detect USB VID/PID, aborting reset"
+            return 1
+        fi
+
+        usb_modeswitch -R -v "$USB_VID" -p "$USB_PID" >/dev/null 2>&1 || true
+
+        log "Waiting 20 seconds after USB reset"
+        sleep 20
+        pkill -9 -x gammu-smsd 2>/dev/null || true
+        # shellcheck disable=SC2093
+        exec "$0" "$@"
+    done
+
 }
 
 main() {
