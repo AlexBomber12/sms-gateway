@@ -5,5 +5,6 @@ baudrate = 115200
 
 [smsd]
 service = files
+DeleteAfterReceive = yes
+MultipartTimeout   = 600
 CheckSecurity = 0
-
