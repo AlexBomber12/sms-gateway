@@ -24,7 +24,7 @@ mkdir -p "${run_dir}"
 export CI_MODE=true
 
 pytest_log="${run_dir}/pytest.log"
-shellcheck_log="${run_dir}/shellcheck.log"
+precommit_log="${run_dir}/pre-commit.log"
 summary_log="${run_dir}/summary.txt"
 PYTEST_TIMEOUT="${PYTEST_TIMEOUT:-240}"
 
@@ -52,6 +52,9 @@ run_check() {
 
 pytest_exit=0
 pytest_timed_out=0
+precommit_exit=0
+run_check "pre-commit" "${precommit_log}" pre-commit run --all-files || precommit_exit=$?
+
 if command -v timeout >/dev/null 2>&1; then
   run_check "pytest" "${pytest_log}" timeout "${PYTEST_TIMEOUT}"s python -m pytest -q || pytest_exit=$?
   if [[ ${pytest_exit} -eq 124 ]]; then
@@ -62,32 +65,10 @@ else
   run_check "pytest" "${pytest_log}" python -m pytest -q || pytest_exit=$?
 fi
 
-shellcheck_exit=0
-shellcheck_files=()
-for file in entrypoint.sh start.sh; do
-  if [[ -f "${file}" ]]; then
-    shellcheck_files+=("${file}")
-  fi
-done
-
-if [[ -d scripts ]]; then
-  shopt -s nullglob
-  for file in scripts/*.sh; do
-    shellcheck_files+=("${file}")
-  done
-  shopt -u nullglob
-fi
-
-if [[ ${#shellcheck_files[@]} -eq 0 ]]; then
-  echo "No shell scripts found for shellcheck." >"${shellcheck_log}"
-else
-  run_check "shellcheck" "${shellcheck_log}" shellcheck "${shellcheck_files[@]}" || shellcheck_exit=$?
-fi
-
 {
+  echo "precommit_exit=${precommit_exit}"
   echo "pytest_exit=${pytest_exit}"
   echo "pytest_timeout=${pytest_timed_out}"
-  echo "shellcheck_exit=${shellcheck_exit}"
 } >"${summary_log}"
 
 if ln -sfn "$(basename "${run_dir}")" "${ARTEFACTS_DIR}/latest" 2>/dev/null; then
@@ -105,7 +86,7 @@ if [[ "${KEEP_COUNT}" =~ ^[0-9]+$ ]]; then
   fi
 fi
 
-if (( pytest_exit != 0 || shellcheck_exit != 0 )); then
+if (( precommit_exit != 0 || pytest_exit != 0 )); then
   exit 1
 fi
 
