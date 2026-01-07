@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import time
 from pathlib import Path
@@ -114,3 +115,7 @@ def test_single_instance(tmp_path):
         proc.terminate()
         proc.wait(timeout=5)
         dev.unlink()
+
+
+def test_reset_usb_modem_defined():
+    assert re.search(r"^reset_usb_modem\(\)", FUNCTIONS, re.M)
