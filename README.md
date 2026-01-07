@@ -87,6 +87,11 @@ Or run inside the container:
 gammu -c /tmp/gammu-smsdrc getallsms
 ```
 
+## H. Modem Watchdog
+The watchdog runs inside `entrypoint.sh`. It monitors `gammu-smsd` output for repeated timeout patterns, then stops `gammu-smsd`, resets the USB modem, waits for it to settle, and restarts modem detection. Resets use `usb_modeswitch` when available and can rebind the USB device via sysfs.
+
+Watchdog tuning is available via `MODEM_TIMEOUT_THRESHOLD` and the `RESET_*` backoff variables. USB detection can be overridden with `USB_VID` and `USB_PID`, otherwise it is derived from `MODEM_PORT` or `lsusb`.
+
 ## Dependencies
 
 All required dependencies are installed automatically via Dockerfile:

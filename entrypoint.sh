@@ -352,8 +352,6 @@ main() {
     GAMMU_SPOOL_PATH="${GAMMU_SPOOL_PATH:-/var/spool/gammu}"
     mkdir -p "$GAMMU_SPOOL_PATH"/{inbox,outbox,sent,error,archive}
 
-    service cron start >/dev/null 2>&1 || true
-
     while true; do
         log "Starting modem detection"
         local start=$SECONDS

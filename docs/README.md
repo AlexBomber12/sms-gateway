@@ -1,9 +1,17 @@
 # Documentation
 
 ## Modem watchdog
-The image installs `/usr/local/bin/smsgw-watchdog.sh` and schedules it via `/etc/cron.d/smsgw-watchdog.cron`.
-Every five minutes the script checks the health of the `smsgateway` container.
-When it is reported as *unhealthy* the script detects the Huawei modem's current PID with `lsusb`, performs a soft USB reset and restarts the container.
+The modem watchdog is built into `entrypoint.sh`. It starts `gammu-smsd`, watches its output, and looks for consecutive timeout patterns. Once the threshold is reached it stops `gammu-smsd`, resets the USB modem, waits for it to settle, and restarts modem detection.
 
-To adapt to other Huawei models change the `VID` variable in the script. The PID is discovered automatically.
-All output is appended to `/var/log/smsgw-watchdog.log` on the host.
+The reset sequence uses `usb_modeswitch` when available and optionally rebinds the USB device via sysfs. The watchdog applies a backoff window to avoid reset storms.
+
+Configuration options:
+- `MODEM_TIMEOUT_THRESHOLD` (default: 3)
+- `RESET_MIN_INTERVAL` (default: 60)
+- `RESET_BACKOFF_STEP` (default: 30)
+- `RESET_BACKOFF_MAX` (default: 300)
+- `RESET_BACKOFF_WINDOW` (default: 300)
+- `RESET_SETTLE_SECONDS` (default: 20)
+- `USB_VID` and `USB_PID` override USB detection; otherwise detection uses `MODEM_PORT` or `lsusb`.
+
+Check container logs for `[watchdog]` lines to confirm behavior.
