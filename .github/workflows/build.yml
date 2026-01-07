@@ -16,7 +16,7 @@ jobs:
         run: pip install -r requirements.txt -r requirements-dev.txt
 
       - name: Lint
-        run: python -m py_compile on_receive.py
+        run: python -m py_compile __init__.py on_receive.py queue_worker.py sms_queue.py
 
       - name: Run tests
         env:
