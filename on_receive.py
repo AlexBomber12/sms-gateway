@@ -10,6 +10,8 @@ from typing import Iterable, Tuple
 
 import requests
 
+import sms_queue
+
 
 def get_env(name: str, required: bool = True, default: str | None = None) -> str:
     """Get environment variable and optionally require it."""
@@ -39,13 +41,18 @@ def parse_sms(parts: int, getenv=os.getenv) -> Tuple[str, str]:
     return number, text[:4096]
 
 
-def send_to_telegram(bot_token: str, chat_id: str, number: str, text: str) -> None:
-    """Send assembled SMS to Telegram."""
-    payload = {
+def build_telegram_payload(chat_id: str, number: str, text: str) -> dict[str, str]:
+    """Build Telegram payload for the SMS message."""
+    return {
         "chat_id": chat_id,
         "text": f"<b>{html.escape(number)}</b>\n{html.escape(text)}",
         "parse_mode": "HTML",
     }
+
+
+def send_to_telegram(bot_token: str, chat_id: str, number: str, text: str) -> None:
+    """Send assembled SMS to Telegram."""
+    payload = build_telegram_payload(chat_id, number, text)
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     for attempt in range(120):
         try:
@@ -59,17 +66,43 @@ def send_to_telegram(bot_token: str, chat_id: str, number: str, text: str) -> No
     raise SystemExit(1)
 
 
-def main() -> None:
+def normalize_delivery_mode(value: str | None) -> str:
+    mode = (value or "direct").strip().lower()
+    if mode == "queue":
+        return "queue"
+    if mode != "direct":
+        logging.warning("Unknown DELIVERY_MODE=%r; defaulting to direct", value)
+    return "direct"
+
+
+def enqueue_sms(number: str, text: str) -> None:
+    base_dir = sms_queue.resolve_queue_dir()
+    path = sms_queue.enqueue_message(number, text, base_dir)
+    logging.info("Enqueued SMS from %s to %s", number, path)
+
+
+def main(argv: list[str] | None = None) -> None:
     logging.basicConfig(level=os.getenv("LOGLEVEL", "INFO"))
+    argv = sys.argv[1:] if argv is None else argv
     try:
-        bot = get_env("TELEGRAM_BOT_TOKEN")
-        chat = get_env("TELEGRAM_CHAT_ID")
         parts = int(os.getenv("SMS_MESSAGES", "1"))
     except Exception as exc:
         logging.error("%s", exc)
         sys.exit(1)
 
     number, text = parse_sms(parts)
+    delivery_mode = "queue" if "--enqueue" in argv else normalize_delivery_mode(os.getenv("DELIVERY_MODE"))
+    if delivery_mode == "queue":
+        enqueue_sms(number, text)
+        return
+
+    try:
+        bot = get_env("TELEGRAM_BOT_TOKEN")
+        chat = get_env("TELEGRAM_CHAT_ID")
+    except Exception as exc:
+        logging.error("%s", exc)
+        sys.exit(1)
+
     send_to_telegram(bot, chat, number, text)
 
 
