@@ -1,0 +1,10 @@
+[Unit]
+Description=SMS Gateway modem reset (host-level fallback)
+After=network.target
+
+[Service]
+Type=oneshot
+Environment=USB_VID=12d1
+Environment=USB_PID=1506
+Environment=RESET_SETTLE_SECONDS=15
+ExecStart=/usr/local/sbin/sms-gateway-modem-reset.sh
