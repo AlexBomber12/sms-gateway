@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
+set -e
 set -u
 set -o pipefail
 
 ARTEFACTS_DIR="artefacts"
 KEEP_COUNT="${ARTEFACTS_KEEP:-20}"
+VERBOSE="${VERBOSE:-0}"
 
 mkdir -p "${ARTEFACTS_DIR}"
 
@@ -26,17 +28,38 @@ shellcheck_log="${run_dir}/shellcheck.log"
 summary_log="${run_dir}/summary.txt"
 PYTEST_TIMEOUT="${PYTEST_TIMEOUT:-240}"
 
+run_check() {
+  local name="$1"
+  local log_file="$2"
+  shift 2
+
+  local rc=0
+  if [[ "${VERBOSE}" == "1" ]]; then
+    echo "==> ${name}"
+    set +e
+    "$@" 2>&1 | tee "${log_file}"
+    rc=${PIPESTATUS[0]}
+    set -e
+  else
+    set +e
+    "$@" >"${log_file}" 2>&1
+    rc=$?
+    set -e
+  fi
+
+  return "${rc}"
+}
+
 pytest_exit=0
 pytest_timed_out=0
 if command -v timeout >/dev/null 2>&1; then
-  timeout "${PYTEST_TIMEOUT}"s python -m pytest -q >"${pytest_log}" 2>&1
-  pytest_exit=$?
+  run_check "pytest" "${pytest_log}" timeout "${PYTEST_TIMEOUT}"s python -m pytest -q || pytest_exit=$?
   if [[ ${pytest_exit} -eq 124 ]]; then
     pytest_timed_out=1
     echo "PYTEST_TIMEOUT after ${PYTEST_TIMEOUT}s" >>"${pytest_log}"
   fi
 else
-  python -m pytest -q >"${pytest_log}" 2>&1 || pytest_exit=$?
+  run_check "pytest" "${pytest_log}" python -m pytest -q || pytest_exit=$?
 fi
 
 shellcheck_exit=0
@@ -58,7 +81,7 @@ fi
 if [[ ${#shellcheck_files[@]} -eq 0 ]]; then
   echo "No shell scripts found for shellcheck." >"${shellcheck_log}"
 else
-  shellcheck "${shellcheck_files[@]}" >"${shellcheck_log}" 2>&1 || shellcheck_exit=$?
+  run_check "shellcheck" "${shellcheck_log}" shellcheck "${shellcheck_files[@]}" || shellcheck_exit=$?
 fi
 
 {
@@ -74,7 +97,7 @@ else
 fi
 
 if [[ "${KEEP_COUNT}" =~ ^[0-9]+$ ]]; then
-  mapfile -t runs < <(ls -1dt "${ARTEFACTS_DIR}"/run-* 2>/dev/null)
+  mapfile -t runs < <(ls -1dt "${ARTEFACTS_DIR}"/run-* 2>/dev/null || true)
   if (( ${#runs[@]} > KEEP_COUNT )); then
     for ((i=KEEP_COUNT; i<${#runs[@]}; i++)); do
       rm -rf "${runs[$i]}"
