@@ -1,4 +1,13 @@
 .env
+.venv/
+.cursor/
+.vscode/
+.idea/
+artefacts/
 state/
-*.tar
 __pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store
+*.tar

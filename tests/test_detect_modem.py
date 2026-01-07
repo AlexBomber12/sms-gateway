@@ -4,7 +4,9 @@ import time
 from pathlib import Path
 
 ENTRYPOINT = Path("entrypoint.sh").read_text().splitlines()
-CUT = ENTRYPOINT.index('main "$@"')
+CUT = next(
+    i for i, line in enumerate(ENTRYPOINT) if line.strip() == 'if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then'
+)
 FUNCTIONS = "\n".join(ENTRYPOINT[:CUT])
 
 
@@ -30,28 +32,31 @@ def run_bash(snippet, env):
     return subprocess.run(["bash", "-c", script], env=env, capture_output=True, text=True)
 
 
-def setup_env(tmp_path):
+def setup_env(tmp_path, modem_port=None):
     env = os.environ.copy()
     env["PATH"] = f"{tmp_path}:" + env["PATH"]
     env["GAMMU_SPOOL_PATH"] = "/tmp/gammu-test"
+    if modem_port is not None:
+        env["MODEM_PORT"] = str(modem_port)
     return env
 
 
 def test_detect_modem_success(tmp_path):
     make_gammu_stub(tmp_path)
-    dev = Path("/dev/ttyUSB42")
+    dev = tmp_path / "ttyUSB42"
     dev.touch()
-    env = setup_env(tmp_path)
-    res = run_bash("detect_modem", env)
+    env = setup_env(tmp_path, modem_port=dev)
+    res = run_bash('detect_modem; echo "MODEM_PORT=${MODEM_PORT}"', env)
     dev.unlink()
     assert res.returncode == 0
+    assert f"MODEM_PORT={dev}" in res.stdout
 
 
 def test_detect_modem_failure(tmp_path):
     make_gammu_stub(tmp_path, succeed_after=999)
-    dev = Path("/dev/ttyUSB42")
+    dev = tmp_path / "ttyUSB42"
     dev.touch()
-    env = setup_env(tmp_path)
+    env = setup_env(tmp_path, modem_port=dev)
     res = run_bash("detect_modem", env)
     dev.unlink()
     assert res.returncode == 1
@@ -96,9 +101,10 @@ def test_single_instance(tmp_path):
     smsd = Path(tmp_path) / "gammu-smsd"
     smsd.write_text("#!/usr/bin/env bash\n/bin/sleep 60\n")
     smsd.chmod(0o755)
-    dev = Path("/dev/ttyUSB42")
+    dev = tmp_path / "ttyUSB42"
     dev.touch()
-    env = setup_env(tmp_path)
+    env = setup_env(tmp_path, modem_port=dev)
+    env.pop("CI_MODE", None)
     proc = subprocess.Popen(["bash", "entrypoint.sh"], env=env)
     try:
         time.sleep(2)
