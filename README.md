@@ -26,16 +26,24 @@ This container forwards incoming SMS messages from a USB GSM modem to a Telegram
    [entrypoint] Starting sms-daemon
    ```
 
-## C. docker-compose.yml Notes
-Ensure your `docker-compose.yml` includes:
+## C. Production recommended modem settings
+Set `MODEM_PORT` to a stable `/dev/serial/by-id/<device>` path. Ensure your `docker-compose.yml` mounts the serial symlinks and maps the modem devices:
 ```yaml
-devices:
-  - /dev/ttyUSB0:/dev/ttyUSB0
-privileged: true
-group_add:
-  - dialout
+services:
+  smsgateway:
+    privileged: true
+    group_add:
+      - dialout
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+      - /dev/ttyUSB1:/dev/ttyUSB1
+      - /dev/ttyUSB2:/dev/ttyUSB2
+      - /dev/bus/usb:/dev/bus/usb
+    volumes:
+      - /dev/serial/by-id:/dev/serial/by-id:ro
+      - /dev/serial/by-path:/dev/serial/by-path:ro
 ```
-These settings give the container access to the modem.
+These settings keep the container stable across USB re-enumeration and enable USB resets.
 
 ## D. Environment Variables
 | Variable | Required | Description |
