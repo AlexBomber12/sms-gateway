@@ -47,6 +47,10 @@ These settings give the container access to the modem.
 | GAMMU_DEBUGLEVEL | ❌ | Numeric gammu-smsd debuglevel (overrides numeric LOGLEVEL) |
 | DELIVERY_MODE | ❌ | direct (default) or queue (enqueue + worker) |
 | GAMMU_SPOOL_PATH | ❌ | Path for Gammu spool directories |
+| SMSGW_QUEUE_DIR | ❌ | Queue base directory (defaults to `${GAMMU_SPOOL_PATH}/sms-queue`) |
+| QUEUE_POLL_INTERVAL | ❌ | Queue poll interval in seconds when idle |
+| QUEUE_MAX_RETRIES | ❌ | Max delivery attempts per queued SMS |
+| QUEUE_RETRY_DELAY | ❌ | Delay in seconds between delivery retries |
 | MODEM_TIMEOUT_THRESHOLD | ❌ | Watchdog: timeouts before reset |
 | RESET_MIN_INTERVAL | ❌ | Watchdog: min seconds between resets |
 | RESET_BACKOFF_STEP | ❌ | Watchdog: backoff increment in seconds |
