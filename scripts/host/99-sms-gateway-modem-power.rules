@@ -1,0 +1,3 @@
+# Disable USB autosuspend for the SMS gateway modem.
+# Replace idVendor/idProduct with your modem values (see `lsusb`).
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="12d1", ATTR{idProduct}=="1506", TEST=="power/control", ATTR{power/control}="on"
