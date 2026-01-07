@@ -15,6 +15,9 @@ jobs:
       - name: Install python deps
         run: pip install -r requirements.txt -r requirements-dev.txt
 
+      - name: Run pre-commit
+        run: pre-commit run --all-files
+
       - name: Lint
         run: python -m py_compile __init__.py on_receive.py queue_worker.py sms_queue.py
 
@@ -30,11 +33,6 @@ jobs:
           images: ghcr.io/${{ github.repository }}
 
       - uses: docker/setup-buildx-action@v3
-
-      - name: shellcheck entrypoint
-        uses: ludeeus/action-shellcheck@master
-        with:
-          check_together: 'entrypoint.sh'
 
       - name: Build Docker image
         uses: docker/build-push-action@v5

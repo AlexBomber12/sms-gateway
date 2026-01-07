@@ -5,9 +5,7 @@ import time
 from pathlib import Path
 
 ENTRYPOINT = Path("entrypoint.sh").read_text().splitlines()
-CUT = next(
-    i for i, line in enumerate(ENTRYPOINT) if line.strip() == 'if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then'
-)
+CUT = next(i for i, line in enumerate(ENTRYPOINT) if line.strip() == 'if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then')
 FUNCTIONS = "\n".join(ENTRYPOINT[:CUT])
 
 

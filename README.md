@@ -161,3 +161,10 @@ All required dependencies are installed automatically via Dockerfile:
 - gammu-smsd
 - usb-modeswitch
 - socat
+
+## K. Developer setup
+```bash
+pip install -r requirements-dev.txt
+pre-commit install
+pre-commit run --all-files
+```
