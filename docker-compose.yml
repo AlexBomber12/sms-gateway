@@ -5,12 +5,15 @@ services:
     container_name: smsgateway
     group_add: [dialout]
     devices:
-      - /dev/ttyUSB0:/dev/ttyUSB0        # only initial mapping; others appear automatically
-      - /dev/bus/usb:/dev/bus/usb       # pass whole usb bus for reset
+      - /dev/ttyUSB0:/dev/ttyUSB0
+      - /dev/ttyUSB1:/dev/ttyUSB1
+      - /dev/ttyUSB2:/dev/ttyUSB2
+      - /dev/bus/usb:/dev/bus/usb
     env_file: [.env]
     volumes:
       - ./state:/var/spool/gammu
-    entrypoint: ./entrypoint.sh
+      - /dev/serial/by-id:/dev/serial/by-id:ro
+      - /dev/serial/by-path:/dev/serial/by-path:ro
     healthcheck:
       test: ["CMD-SHELL", "test -f /tmp/gammu-smsdrc && pgrep -x gammu-smsd >/dev/null 2>&1"]
       interval: 60s
