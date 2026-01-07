@@ -10,6 +10,8 @@ log() {
 
 LAST_RESET_TS=0
 RESET_BACKOFF=0
+DELIVERY_MODE_RESOLVED="direct"
+QUEUE_WORKER_PID=""
 
 normalize_usb_id() {
     local value="$1"
@@ -32,10 +34,46 @@ get_gammu_debuglevel() {
     return 1
 }
 
+resolve_delivery_mode() {
+    local mode="${DELIVERY_MODE:-direct}"
+    mode="${mode,,}"
+    if [[ "$mode" == "queue" ]]; then
+        DELIVERY_MODE_RESOLVED="queue"
+        return 0
+    fi
+    if [[ -n "$mode" && "$mode" != "direct" ]]; then
+        log "Unknown DELIVERY_MODE '$mode'; defaulting to direct"
+    fi
+    DELIVERY_MODE_RESOLVED="direct"
+    return 0
+}
+
+get_run_on_receive_cmd() {
+    if [[ "$DELIVERY_MODE_RESOLVED" == "queue" ]]; then
+        printf '%s' "python3 /app/on_receive.py --enqueue"
+    else
+        printf '%s' "python3 /app/on_receive.py"
+    fi
+}
+
+start_queue_worker_if_enabled() {
+    if [[ "$DELIVERY_MODE_RESOLVED" != "queue" ]]; then
+        return 0
+    fi
+    if [[ -n "${QUEUE_WORKER_PID:-}" ]] && kill -0 "$QUEUE_WORKER_PID" 2>/dev/null; then
+        return 0
+    fi
+    log "Starting queue worker"
+    python3 /app/queue_worker.py &
+    QUEUE_WORKER_PID=$!
+}
+
 generate_config() {
     local dev="$1"
     local debuglevel=""
+    local run_on_receive=""
     debuglevel=$(get_gammu_debuglevel 2>/dev/null || true)
+    run_on_receive=$(get_run_on_receive_cmd)
     cat > /tmp/gammu-smsdrc <<EOF
 [gammu]
 device = ${dev}
@@ -47,7 +85,7 @@ inboxpath    = ${GAMMU_SPOOL_PATH}/inbox/
 outboxpath   = ${GAMMU_SPOOL_PATH}/outbox/
 sentpath     = ${GAMMU_SPOOL_PATH}/sent/
 errorpath    = ${GAMMU_SPOOL_PATH}/error/
-RunOnReceive = python3 /app/on_receive.py
+RunOnReceive = ${run_on_receive}
 logfile      = /dev/stdout
 DeleteAfterReceive = yes
 MultipartTimeout   = 600
@@ -351,6 +389,8 @@ main() {
 
     GAMMU_SPOOL_PATH="${GAMMU_SPOOL_PATH:-/var/spool/gammu}"
     mkdir -p "$GAMMU_SPOOL_PATH"/{inbox,outbox,sent,error,archive}
+    resolve_delivery_mode
+    start_queue_worker_if_enabled
 
     while true; do
         log "Starting modem detection"
