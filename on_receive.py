@@ -10,6 +10,7 @@ from typing import Iterable, Tuple
 
 import requests
 
+import logging_utils
 import sms_queue
 
 
@@ -82,7 +83,7 @@ def enqueue_sms(number: str, text: str) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
-    logging.basicConfig(level=os.getenv("LOGLEVEL", "INFO"))
+    logging.basicConfig(level=logging_utils.get_loglevel())
     argv = sys.argv[1:] if argv is None else argv
     try:
         parts = int(os.getenv("SMS_MESSAGES", "1"))

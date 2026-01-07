@@ -20,8 +20,10 @@ This container forwards incoming SMS messages from a USB GSM modem to a Telegram
    ```
    Expected logs:
    ```
-   [entrypoint] ✅ Using pre-set /dev/ttyUSB0
-   Starting phone communication...
+   [entrypoint] Starting modem detection
+   [entrypoint] [detect_modem] probing /dev/ttyUSB0
+   [entrypoint] [detect_modem] found working modem on /dev/ttyUSB0
+   [entrypoint] Starting sms-daemon
    ```
 
 ## C. docker-compose.yml Notes
@@ -41,7 +43,7 @@ These settings give the container access to the modem.
 | MODEM_PORT | ✅ | e.g., `/dev/ttyUSB0`; device path of your modem |
 | TELEGRAM_BOT_TOKEN | ✅ | Bot token used to forward messages |
 | TELEGRAM_CHAT_ID | ✅ | Chat ID to receive forwarded messages |
-| LOGLEVEL | ❌ | Python logging level: INFO, DEBUG, WARNING, etc. |
+| LOGLEVEL | ❌ | Python logging level name (INFO, DEBUG, WARNING, etc.) or numeric |
 | GAMMU_DEBUGLEVEL | ❌ | Numeric gammu-smsd debuglevel (overrides numeric LOGLEVEL) |
 | DELIVERY_MODE | ❌ | direct (default) or queue (enqueue + worker) |
 | GAMMU_SPOOL_PATH | ❌ | Path for Gammu spool directories |
@@ -85,8 +87,11 @@ gammu -c /tmp/rc getallsms
 - `docker logs -f smsgateway` or `docker compose logs -f smsgateway`
 - Look for `[detect_modem]`, `[watchdog]`, and `gammu-smsd` lines for detection and resets
 
+### Healthcheck behavior
+The healthcheck is non-intrusive: it verifies `gammu-smsd` is running and `/tmp/gammu-smsdrc` exists. It does not probe the modem.
+
 ### Typical modem issues and auto-recovery
-The watchdog counts timeout patterns (TIMEOUT, No response, etc.). After `MODEM_TIMEOUT_THRESHOLD`, it stops `gammu-smsd`, resets USB, waits `RESET_SETTLE_SECONDS`, and restarts detection. Frequent resets usually point to USB power, autosuspend, or ModemManager conflicts.
+The built-in watchdog (inside `entrypoint.sh`) counts timeout patterns (TIMEOUT, No response, etc.). After `MODEM_TIMEOUT_THRESHOLD`, it stops `gammu-smsd`, resets USB, waits `RESET_SETTLE_SECONDS`, and restarts detection. Frequent resets usually point to USB power, autosuspend, or ModemManager conflicts.
 
 ### Host hardening checklist
 See `docs/host-setup.md` for stable `/dev/serial/by-id` paths, USB autosuspend rules, ModemManager guidance, and optional reset timer.
@@ -96,7 +101,7 @@ See `docs/host-setup.md` for stable `/dev/serial/by-id` paths, USB autosuspend r
 |---------|-------|-----|
 | No responsive modem | Invalid MODEM_PORT or modem not connected | Check `ls -l /dev/serial/by-id/` or `ls /dev/ttyUSB*` and update `.env` |
 | you don't have the required permission | Missing `privileged: true` or `group_add` | Add both to `docker-compose.yml` |
-| Unknown level: 'l' | Invalid LOGLEVEL value | Use `LOGLEVEL=INFO` or `DEBUG` |
+| LOGLEVEL ignored (defaults to INFO) | Invalid LOGLEVEL value | Use a valid name (INFO, DEBUG, WARNING, etc.) or a numeric level |
 | gammu-smsd exits or container restarts endlessly | Config or modem issue | Check logs and test with manual `gammu identify` |
 | SMS received but not parsed | on_receive.py failure or incorrect spool path | Check logs and ensure `GAMMU_SPOOL_PATH` is correct |
 
@@ -133,7 +138,8 @@ Watchdog tuning is available via `MODEM_TIMEOUT_THRESHOLD` and the `RESET_*` bac
 
 ## I. Upgrade Notes
 - `DELIVERY_MODE=direct` remains the default; set `DELIVERY_MODE=queue` to enable durable, buffered delivery via the queue worker.
-- `GAMMU_DEBUGLEVEL` now controls gammu-smsd debug output; numeric `LOGLEVEL` is still accepted as a fallback.
+- `LOGLEVEL` now accepts named or numeric values for Python logs; invalid values default to INFO without crashing.
+- `GAMMU_DEBUGLEVEL` controls gammu-smsd debug output; numeric `LOGLEVEL` is still accepted as a fallback.
 - Watchdog tuning envs are now documented in `.env.example` (`MODEM_TIMEOUT_THRESHOLD`, `RESET_*`) to adjust recovery timing.
 - For more stable deployments, prefer `/dev/serial/by-id` for `MODEM_PORT` and review `docs/host-setup.md`.
 

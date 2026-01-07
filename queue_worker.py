@@ -11,6 +11,7 @@ from typing import Dict
 
 import requests
 
+import logging_utils
 import sms_queue
 from on_receive import build_telegram_payload, get_env
 
@@ -108,7 +109,7 @@ def process_queue_once(
 
 
 def run_worker() -> None:
-    logging.basicConfig(level=os.getenv("LOGLEVEL", "INFO"))
+    logging.basicConfig(level=logging_utils.get_loglevel())
     try:
         bot_token = get_env("TELEGRAM_BOT_TOKEN")
         chat_id = get_env("TELEGRAM_CHAT_ID")

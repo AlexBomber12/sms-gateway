@@ -15,3 +15,12 @@ Configuration options:
 - `USB_VID` and `USB_PID` override USB detection; otherwise detection uses `MODEM_PORT` or `lsusb`.
 
 Check container logs for `[watchdog]` lines to confirm behavior.
+
+## Runtime logs
+Entrypoint logs are prefixed with `[entrypoint]`. Modem probing uses `[detect_modem]`, and watchdog activity uses `[watchdog]`.
+
+## Healthcheck behavior
+The container healthcheck is non-intrusive: it checks for `/tmp/gammu-smsdrc` and a running `gammu-smsd` process, without probing the modem.
+
+## Windows ADS artifacts
+Windows can create NTFS Alternate Data Stream files like `*:Zone.Identifier` during downloads or extraction. These are ignored in `.gitignore` to avoid cross-platform checkout issues.
