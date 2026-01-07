@@ -117,6 +117,17 @@ See `docs/host-setup.md` for stable `/dev/serial/by-id` paths, USB autosuspend r
 | gammu-smsd exits or container restarts endlessly | Config or modem issue | Check logs and test with manual `gammu identify` |
 | SMS received but not parsed | on_receive.py failure or incorrect spool path | Check logs and ensure `GAMMU_SPOOL_PATH` is correct |
 
+### /dev/serial/by-id missing inside container
+- Symptom: `MODEM_PORT=/dev/serial/by-id/...` but `ls /dev/serial/by-id` fails inside the container.
+- Cause: container started without the compose file that mounts `/dev/serial`, or compose changes were not applied (container not recreated).
+- Fix:
+  ```bash
+  docker inspect smsgateway --format '{{range .Mounts}}{{println .Destination " <- " .Source}}{{end}}' | sort
+  docker inspect smsgateway --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}'
+  docker inspect smsgateway --format '{{index .Config.Labels "com.docker.compose.project.config_files"}}'
+  docker compose up -d --force-recreate
+  ```
+
 Manual AT check (host):
 ```bash
 echo -e "AT\r" | sudo socat - /dev/ttyUSB0,crnl

@@ -28,6 +28,16 @@ precommit_log="${run_dir}/pre-commit.log"
 summary_log="${run_dir}/summary.txt"
 PYTEST_TIMEOUT="${PYTEST_TIMEOUT:-240}"
 
+if ! command -v pre-commit >/dev/null 2>&1; then
+  echo "pre-commit is required but not installed. Install with 'pip install -r requirements-dev.txt'." | tee "${precommit_log}" >&2
+  {
+    echo "precommit_exit=127"
+    echo "pytest_exit=0"
+    echo "pytest_timeout=0"
+  } >"${summary_log}"
+  exit 1
+fi
+
 run_check() {
   local name="$1"
   local log_file="$2"
