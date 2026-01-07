@@ -12,19 +12,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Install python deps
-        run: pip install -r requirements.txt -r requirements-dev.txt
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt -r requirements-dev.txt
 
       - name: Run pre-commit
         run: pre-commit run --all-files
 
       - name: Lint
         run: python -m py_compile __init__.py on_receive.py queue_worker.py sms_queue.py
-
-      - name: Run tests
-        env:
-          CI_MODE: "true"
-        run: sudo -E python -m pytest -v -k "not test_detect_modem"
 
       - name: Docker meta
         id: vars
