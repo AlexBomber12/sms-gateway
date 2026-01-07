@@ -64,7 +64,7 @@ fi
 
 shellcheck_exit=0
 shellcheck_files=()
-for file in entrypoint.sh start.sh smsgw-watchdog.sh; do
+for file in entrypoint.sh start.sh; do
   if [[ -f "${file}" ]]; then
     shellcheck_files+=("${file}")
   fi
